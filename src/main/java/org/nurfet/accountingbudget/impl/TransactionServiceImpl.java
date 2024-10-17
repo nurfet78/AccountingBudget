@@ -107,7 +107,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public ReportDTO generateDetailedReport(LocalDate startDate, LocalDate endDate) {
+    public ReportDTO generateBasicReport(LocalDate startDate, LocalDate endDate) {
         List<Transaction> transactions = getFilteredTransactions(startDate, endDate, null, null);
         double totalIncome = transactions.stream()
                 .filter(t -> t.getType() == Transaction.TransactionType.INCOME)
@@ -122,7 +122,18 @@ public class TransactionServiceImpl implements TransactionService {
                 .collect(Collectors.groupingBy(t -> t.getCategory().getName(),
                         Collectors.summingDouble(Transaction::getAmount)));
 
-        return new ReportDTO(totalIncome, totalExpense, transactions, categoryTotals);
+        ReportDTO reportDTO = new ReportDTO();
+        reportDTO.setTotalIncome(totalIncome);
+        reportDTO.setTotalExpense(totalExpense);
+        reportDTO.setTransactions(transactions);
+        reportDTO.setCategoryTotals(categoryTotals);
+
+        reportDTO.setTotalDays(0);
+        reportDTO.setDaysWithTransactions(0);
+        reportDTO.setAverageExpensePerDay(0);
+        reportDTO.setAverageExpensePerTransactionDay(0);
+
+        return reportDTO;
     }
 
     private double calculateTotalExpenses() {

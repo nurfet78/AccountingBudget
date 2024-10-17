@@ -3,8 +3,7 @@ package org.nurfet.accountingbudget.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nurfet.accountingbudget.dto.ReportDTO;
-import org.nurfet.accountingbudget.model.Transaction;
-import org.nurfet.accountingbudget.service.TransactionService;
+import org.nurfet.accountingbudget.service.ReportService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.time.LocalDate;
 
-import java.time.temporal.ChronoUnit;
 
 @Controller
 @RequestMapping("/report")
@@ -20,7 +18,7 @@ import java.time.temporal.ChronoUnit;
 @Slf4j
 public class ReportController {
 
-    private final TransactionService transactionService;
+    private final ReportService reportService;
 
     @GetMapping
     public String showReport(Model model) {
@@ -28,26 +26,13 @@ public class ReportController {
         LocalDate startDate = LocalDate.now().withDayOfMonth(1);
         LocalDate endDate = LocalDate.now();
 
-        ReportDTO report = transactionService.generateDetailedReport(startDate, endDate);
-        long totalDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
-        double totalExpense = Math.abs(report.getTotalExpense());
-
-        long daysWithTransactions = report.getTransactions().stream()
-                .map(Transaction::getDate)
-                .distinct()
-                .count();
-
-        double averageExpensePerDay = totalExpense / totalDays;
-        double averageExpensePerTransactionDay = daysWithTransactions > 0 ? totalExpense / daysWithTransactions : 0;
+        ReportDTO report = reportService.generateDetailedReport(startDate, endDate);
 
 
         model.addAttribute("report", report);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
-        model.addAttribute("totalDays", totalDays);
-        model.addAttribute("daysWithTransactions", daysWithTransactions);
-        model.addAttribute("averageExpensePerDay", averageExpensePerDay);
-        model.addAttribute("averageExpensePerTransactionDay", averageExpensePerTransactionDay);
+
 
         return "report";
     }

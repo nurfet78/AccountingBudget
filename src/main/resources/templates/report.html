@@ -23,10 +23,10 @@
       <h4>Итого</h4>
       <p>Общий доход: <span th:text="${#numbers.formatDecimal(report.totalIncome, 1, 2)}"></span></p>
       <p>Общий расход: <span th:text="${#numbers.formatDecimal(report.totalExpense, 1, 2)}"></span></p>
-      <p>Всего дней: <span th:text="${totalDays}"></span></p>
-      <p>Дней с покупками: <span th:text="${daysWithTransactions}"></span></p>
-      <p>Ежедневный средний расход: <span th:text="${#numbers.formatDecimal(averageExpensePerDay, 1, 2)}"></span></p>
-      <p>Средний расход в дни с транзакциями: <span th:text="${#numbers.formatDecimal(averageExpensePerTransactionDay, 1, 2)}"></span></p>
+      <p>Всего дней: <span th:text="${report.totalDays}"></span></p>
+      <p>Дней с покупками: <span th:text="${report.daysWithTransactions}"></span></p>
+      <p>Ежедневный средний расход: <span th:text="${#numbers.formatDecimal(report.averageExpensePerDay, 1, 2)}"></span></p>
+      <p>Средний расход в дни с транзакциями: <span th:text="${#numbers.formatDecimal(report.averageExpensePerTransactionDay, 1, 2)}"></span></p>
       <p>Баланс: <span th:text="${#numbers.formatDecimal(report.totalIncome - report.totalExpense, 1, 2)}"></span></p>
     </div>
   </div>

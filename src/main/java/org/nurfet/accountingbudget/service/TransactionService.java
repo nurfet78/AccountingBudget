@@ -16,7 +16,6 @@ public interface TransactionService {
 
     List<Transaction> getTransactionsByDateRangeAndCategory(LocalDate startDate, LocalDate endDate, String categoryName);
 
-    //ReportDTO generateReport(LocalDate startDate, LocalDate endDate);
 
     List<Transaction> getAllTransactions();
 
@@ -27,5 +26,5 @@ public interface TransactionService {
     List<Transaction> getFilteredTransactions(LocalDate startDate, LocalDate endDate,
                                               String categoryName, Transaction.TransactionType type);
 
-    ReportDTO generateDetailedReport(LocalDate startDate, LocalDate endDate);
+    ReportDTO generateBasicReport(LocalDate startDate, LocalDate endDate);
 }
