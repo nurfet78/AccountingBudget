@@ -5,18 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.nurfet.accountingbudget.dto.ReportDTO;
 import org.nurfet.accountingbudget.model.Transaction;
 import org.nurfet.accountingbudget.service.TransactionService;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/report")

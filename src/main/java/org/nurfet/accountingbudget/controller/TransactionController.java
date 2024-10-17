@@ -41,7 +41,6 @@ public class TransactionController {
         model.addAttribute("transaction", transactionService.getTransactionById(id));
         model.addAttribute("categories", categoryService.getAllCategories());
 
-        Transaction t = new Transaction();
         return "transaction-form";
     }
 
