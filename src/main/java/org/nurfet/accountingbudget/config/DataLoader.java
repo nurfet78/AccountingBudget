@@ -17,10 +17,16 @@ public class DataLoader implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         addCategory("Продукты", Transaction.TransactionType.EXPENSE);
+        addCategory("Непродовольственные товары", Transaction.TransactionType.EXPENSE);
+        addCategory("Бытовая химия", Transaction.TransactionType.EXPENSE);
+        addCategory("Средства личной гигиены", Transaction.TransactionType.EXPENSE);
+        addCategory("Ювелирные изделия", Transaction.TransactionType.EXPENSE);
+        addCategory("Спортивные товары", Transaction.TransactionType.EXPENSE);
         addCategory("Одежда", Transaction.TransactionType.EXPENSE);
         addCategory("Коммунальные платежи", Transaction.TransactionType.EXPENSE);
         addCategory("Зарплата", Transaction.TransactionType.INCOME);
         addCategory("Инвестиции", Transaction.TransactionType.INCOME);
+        addCategory("Подработка", Transaction.TransactionType.INCOME);
     }
 
     private void addCategory(String categoryName, Transaction.TransactionType defaultType) {
