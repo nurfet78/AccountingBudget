@@ -98,11 +98,4 @@ public class TransactionController {
 
         return "transaction-report";
     }
-
-    @GetMapping("/updateType")
-    @ResponseBody
-    public String updateTransactionType(@RequestParam Long categoryId) {
-        Category category = categoryService.getCategoryById(categoryId);
-        return category.getDefaultType().toString();
-    }
 }
