@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Error</title>
+</head>
+<body>
+    <h1>Возникло исключение</h1>
+    <div>
+      <p>Сообщение: <span th:text="${message}"></span></p>
+      <p>URL: <span th:text="${url}"></span></p>
+      <p>Метод: <span th:text="${method}"></span></p>
+      <p>Путь: <span th:text="${path}"></span></p>
+      <p>Дата: <span th:text="${timestamp}"></span></p>
+    </div>
+    <br />
+    <a href="javascript:history.back()">Назад</a>
+</body>
+</html>

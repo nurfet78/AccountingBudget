@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Форма финансовой операции</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+            integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="container mt-5">
+    <a th:href="@{/}" class="btn btn-primary mb-3">Вернуться на главную</a>
+    <br />
+    <h1 th:text="${transaction.id == null ? 'Добавить операцию' : 'Редактировать операцию'}"></h1>
+    <form th:action="@{/transactions/save}" th:object="${transaction}" method="post">
+        <input type="hidden" th:field="*{id}" />
+        <div class="form-group mb-3">
+            <label for="date">Дата</label>
+            <input type="date" class="form-control" id="date" th:field="*{date}" required>
+        </div>
+        <div class="form-group mb-3">
+            <label for="amount">Цена</label>
+            <input type="number" step="0.01" class="form-control" id="amount" th:field="*{amount}" required>
+        </div>
+        <div class="form-group mb-3">
+            <label for="category">Категория</label>
+            <select class="form-control" id="category" name="categoryId" required>
+                <option value="">Выберите категорию</option>
+                <option th:each="cat : ${categories}"
+                        th:value="${cat.id}"
+                        th:text="${cat.name}"
+                        th:data-type="${cat.defaultType}"
+                        th:selected="${transaction.category != null and transaction.category.id == cat.id}">
+                </option>
+            </select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="displayType">Тип</label>
+            <input type="text" class="form-control" id="displayType" readonly>
+        </div>
+        <div class="form-group mb-3">
+            <label for="description">Описание</label>
+            <input type="text" class="form-control" id="description" th:field="*{description}">
+        </div>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <a th:href="@{/transactions}" class="btn btn-secondary">Отмена</a>
+    </form>
+</div>
+<script>
+    $(document).ready(function() {
+        $('#category').change(function() {
+            var selectedOption = $(this).find('option:selected');
+            var defaultType = selectedOption.data('type');
+            $('#displayType').val(defaultType === 'INCOME' ? 'Доход' : (defaultType === 'EXPENSE' ? 'Расход' : ''));
+        });
+    });
+</script>
+</body>
+</html>
