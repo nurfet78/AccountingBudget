@@ -27,15 +27,10 @@ public class ReportController {
     private final TransactionService transactionService;
 
     @GetMapping
-    public String showReport(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-                             Model model) {
-        if (startDate == null) {
-            startDate = LocalDate.now().withDayOfMonth(1);
-        }
-        if (endDate == null) {
-            endDate = LocalDate.now();
-        }
+    public String showReport(Model model) {
+
+        LocalDate startDate = LocalDate.now().withDayOfMonth(1);
+        LocalDate endDate = LocalDate.now();
 
         ReportDTO report = transactionService.generateDetailedReport(startDate, endDate);
         long totalDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
@@ -49,26 +44,15 @@ public class ReportController {
         double averageExpensePerDay = totalExpense / totalDays;
         double averageExpensePerTransactionDay = daysWithTransactions > 0 ? totalExpense / daysWithTransactions : 0;
 
-        // Подготовка данных для графика
-        List<String> dates = report.getTransactions().stream()
-                .map(t -> t.getDate().format(DateTimeFormatter.ISO_DATE))
-                .collect(Collectors.toList());
-        List<Double> amounts = report.getTransactions().stream()
-                .map(Transaction::getAmount)
-                .collect(Collectors.toList());
 
-
-        model.addAttribute("chartDates", dates);
-        model.addAttribute("chartAmounts", amounts);
         model.addAttribute("report", report);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
-        model.addAttribute("totalExpense", totalExpense);
         model.addAttribute("totalDays", totalDays);
         model.addAttribute("daysWithTransactions", daysWithTransactions);
         model.addAttribute("averageExpensePerDay", averageExpensePerDay);
         model.addAttribute("averageExpensePerTransactionDay", averageExpensePerTransactionDay);
-        model.addAttribute("transactions", report.getTransactions());
+
         return "report";
     }
 }

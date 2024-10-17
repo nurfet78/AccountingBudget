@@ -95,7 +95,7 @@ public class TransactionController {
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
         model.addAttribute("totalAmount", totalAmount);
-        model.addAttribute("categories", categoryService.getAllCategories());
+
         return "transaction-report";
     }
 
