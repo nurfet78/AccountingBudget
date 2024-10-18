@@ -55,6 +55,8 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional(readOnly = true)
     public List<Transaction> getTransactionsByDateRange(LocalDate startDate, LocalDate endDate) {
+
+        //Возвращаем все транзакции, чьи даты находятся в пределах диапазона от startDate до endDate включительно
         return transactionRepository.findAll().stream()
                 .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
                 .collect(Collectors.toList());
@@ -109,6 +111,8 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public ReportDTO generateBasicReport(LocalDate startDate, LocalDate endDate) {
         List<Transaction> transactions = getFilteredTransactions(startDate, endDate, null, null);
+
+        //Суммируем по типу
         double totalIncome = transactions.stream()
                 .filter(t -> t.getType() == Transaction.TransactionType.INCOME)
                 .mapToDouble(Transaction::getAmount)
@@ -118,6 +122,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .mapToDouble(Transaction::getAmount)
                 .sum();
 
+        //Суммируем по категориям
         Map<String, Double> categoryTotals = transactions.stream()
                 .collect(Collectors.groupingBy(t -> t.getCategory().getName(),
                         Collectors.summingDouble(Transaction::getAmount)));

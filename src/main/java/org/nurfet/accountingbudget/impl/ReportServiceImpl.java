@@ -21,6 +21,8 @@ public class ReportServiceImpl implements ReportService {
     public ReportDTO generateDetailedReport(LocalDate startDate, LocalDate endDate) {
         ReportDTO report = transactionService.generateBasicReport(startDate, endDate);
 
+
+        // Возвращаем количество уникальных дат в которые были проведены транзакции
         long totalDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         long daysWithTransactions = report.getTransactions().stream()
                 .map(Transaction::getDate)
@@ -28,7 +30,11 @@ public class ReportServiceImpl implements ReportService {
                 .count();
 
         double totalExpense = Math.abs(report.getTotalExpense());
+
+        //Среднее значение трат за каждый день отчётного периода
         double averageExpensePerDay = totalExpense / totalDays;
+
+        //Среднее значение трат за каждый день с транзакциями
         double averageExpensePerTransactionDay = daysWithTransactions > 0 ? totalExpense / daysWithTransactions : 0;
 
         report.setTotalDays(totalDays);
