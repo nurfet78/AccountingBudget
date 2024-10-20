@@ -9,7 +9,6 @@ import org.nurfet.accountingbudget.model.AbstractEntity;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
 
 @Getter
 @Setter
@@ -28,12 +27,8 @@ public class SendMessage extends AbstractEntity {
         this.timestamp = LocalDateTime.now();
     }
 
-    public static Optional<SendMessage> create(String content) {
-        if (content == null || content.isEmpty()) {
-            log.warn("Попытка создать сообщение с пустым контентом");
-            return Optional.empty();
-        }
-        return Optional.of(new SendMessage(content));
+    public static SendMessage create(String content) {
+        return new SendMessage(content);
     }
 
     public String getFormattedDate() {

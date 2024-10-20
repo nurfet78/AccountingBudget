@@ -26,9 +26,6 @@ public class Transaction extends AbstractEntity {
     @Column(nullable = false)
     private TransactionType type;
 
-    public enum TransactionType {
-        INCOME, EXPENSE
-    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)

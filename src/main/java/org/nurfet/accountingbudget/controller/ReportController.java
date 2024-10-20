@@ -3,7 +3,7 @@ package org.nurfet.accountingbudget.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nurfet.accountingbudget.dto.ReportDTO;
-import org.nurfet.accountingbudget.service.ReportService;
+import org.nurfet.accountingbudget.service.TransactionService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +18,7 @@ import java.time.LocalDate;
 @Slf4j
 public class ReportController {
 
-    private final ReportService reportService;
+    private final TransactionService transactionService;
 
     @GetMapping
     public String showReport(Model model) {
@@ -26,10 +26,11 @@ public class ReportController {
         LocalDate startDate = LocalDate.now().withDayOfMonth(1);
         LocalDate endDate = LocalDate.now();
 
-        ReportDTO report = reportService.generateDetailedReport(startDate, endDate);
+        ReportDTO report = transactionService.generateDetailedReport(startDate, endDate);
 
 
         model.addAttribute("report", report);
+        model.addAttribute("categoryTotals", transactionService.calculateCategoryTotals());
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
 

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.nurfet.accountingbudget.dto.ReportDTO;
 import org.nurfet.accountingbudget.exception.NotFoundException;
 import org.nurfet.accountingbudget.model.Category;
+import org.nurfet.accountingbudget.model.TransactionType;
 import org.nurfet.accountingbudget.observer.model.SendMessage;
 import org.nurfet.accountingbudget.model.Transaction;
 import org.nurfet.accountingbudget.repository.CategoryRepository;
@@ -15,10 +16,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static org.nurfet.accountingbudget.model.TransactionType.EXPENSE;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +34,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final MailEventPublisherService mailEventPublisherService;
 
-    private static final double EXPENSE_LIMIT = 50000.0;
+    private static final double EXPENSE_LIMIT = 5000000.0;
 
 
     @Override
@@ -40,42 +43,20 @@ public class TransactionServiceImpl implements TransactionService {
 
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        double totalExpenses = calculateTotalExpenses();
+        double totalExpenses = calculateTypeTotals().getOrDefault(EXPENSE, 0.0);
         if (totalExpenses > EXPENSE_LIMIT) {
-            Optional<SendMessage> messageOpt = SendMessage.create("Превышен лимит расходов! Текущая сумма: " + totalExpenses);
-            messageOpt.ifPresentOrElse(
-                    mailEventPublisherService::publishMailCreatedEvent,
-                    () -> log.error("Сообщение не создано: контент отсутствует")
-            );
+            mailEventPublisherService.publishMailCreatedEvent(SendMessage.create("Превышен лимит расходов! Текущая сумма: " + totalExpenses));
         }
 
         return savedTransaction;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<Transaction> getTransactionsByDateRange(LocalDate startDate, LocalDate endDate) {
-
-        //Возвращаем все транзакции, чьи даты находятся в пределах диапазона от startDate до endDate включительно
-        return transactionRepository.findAll().stream()
-                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
-                .collect(Collectors.toList());
-    }
 
     @Override
     public List<Transaction> getTransactionsByCategory(String categoryName) {
         Category category = categoryRepository.findByName(categoryName)
                 .orElseThrow(() -> new NotFoundException(Category.class, null));
         return transactionRepository.findByCategory(category);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Transaction> getTransactionsByDateRangeAndCategory(LocalDate startDate, LocalDate endDate, String categoryName) {
-        Category category = categoryRepository.findByName(categoryName).orElseThrow(() -> new NotFoundException(Category.class, null));
-        return getTransactionsByDateRange(startDate, endDate).stream()
-                .filter(t -> t.getCategory().equals(category))
-                .collect(Collectors.toList());
     }
 
 
@@ -99,7 +80,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public List<Transaction> getFilteredTransactions(LocalDate startDate, LocalDate endDate, String categoryName, Transaction.TransactionType type) {
+    public List<Transaction> getFilteredTransactions(LocalDate startDate, LocalDate endDate, String categoryName, TransactionType type) {
         return transactionRepository.findAll().stream()
                 .filter(t -> (startDate == null || !t.getDate().isBefore(startDate))
                         && (endDate == null || !t.getDate().isAfter(endDate))
@@ -109,44 +90,38 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public ReportDTO generateBasicReport(LocalDate startDate, LocalDate endDate) {
-        List<Transaction> transactions = getFilteredTransactions(startDate, endDate, null, null);
+    public ReportDTO generateDetailedReport(LocalDate startDate, LocalDate endDate) {
+        List<Transaction> transactionList = getFilteredTransactions(startDate, endDate, null, null);
 
-        //Суммируем по типу
-        double totalIncome = transactions.stream()
-                .filter(t -> t.getType() == Transaction.TransactionType.INCOME)
-                .mapToDouble(Transaction::getAmount)
-                .sum();
-        double totalExpense = transactions.stream()
-                .filter(t -> t.getType() == Transaction.TransactionType.EXPENSE)
-                .mapToDouble(Transaction::getAmount)
-                .sum();
+        Map<TransactionType, Double> totals = calculateTypeTotals();
+        double totalExpense = totals.getOrDefault(EXPENSE, 0.0);
+        long totalDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        long totalDaysWithTransaction = transactionList.stream()
+                .map(Transaction::getDate)
+                .distinct()
+                .count();
 
-        //Суммируем по категориям
-        Map<String, Double> categoryTotals = transactions.stream()
-                .collect(Collectors.groupingBy(t -> t.getCategory().getName(),
-                        Collectors.summingDouble(Transaction::getAmount)));
+        double averageExpensePerDay = totalExpense / totalDays;
+        double averageExpensePerDayWithTransaction = totalExpense / totalDaysWithTransaction;
 
-        ReportDTO reportDTO = new ReportDTO();
-        reportDTO.setTotalIncome(totalIncome);
-        reportDTO.setTotalExpense(totalExpense);
-        reportDTO.setTransactions(transactions);
-        reportDTO.setCategoryTotals(categoryTotals);
-
-        reportDTO.setTotalDays(0);
-        reportDTO.setDaysWithTransactions(0);
-        reportDTO.setAverageExpensePerDay(0);
-        reportDTO.setAverageExpensePerTransactionDay(0);
-
-        return reportDTO;
+        return new ReportDTO(
+                transactionList,
+                totals,
+                totalDays,
+                totalDaysWithTransaction,
+                averageExpensePerDay,
+                averageExpensePerDayWithTransaction);
     }
 
-    private double calculateTotalExpenses() {
+    @Override
+    public Map<TransactionType, Double> calculateTypeTotals() {
         return transactionRepository.findAll().stream()
-                .filter(t -> t.getType() == Transaction.TransactionType.EXPENSE)
-                .mapToDouble(Transaction::getAmount)
-                .sum();
+                .collect(Collectors.groupingBy(Transaction::getType, Collectors.summingDouble(Transaction::getAmount)));
     }
 
-
+    @Override
+    public Map<String, Double> calculateCategoryTotals() {
+        return transactionRepository.findAll().stream()
+                .collect(Collectors.groupingBy(t -> t.getCategory().getName(), Collectors.summingDouble(Transaction::getAmount)));
+    }
 }

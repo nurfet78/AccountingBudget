@@ -23,9 +23,9 @@ public class Category extends AbstractEntity {
     private Set<Transaction> transactions = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
-    private Transaction.TransactionType defaultType;
+    private TransactionType defaultType;
 
-    public Category(String name, Transaction.TransactionType defaultType) {
+    public Category(String name, TransactionType defaultType) {
         this.name = name;
         this.defaultType = defaultType;
     }

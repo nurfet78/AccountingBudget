@@ -2,7 +2,7 @@ package org.nurfet.accountingbudget.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.nurfet.accountingbudget.model.Category;
-import org.nurfet.accountingbudget.model.Transaction;
+import org.nurfet.accountingbudget.model.TransactionType;
 import org.nurfet.accountingbudget.service.CategoryService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -24,14 +24,14 @@ public class CategoryController {
     @GetMapping("/add")
     public String showAddForm(Model model) {
         model.addAttribute("category", new Category());
-        model.addAttribute("transactionTypes", Transaction.TransactionType.values());
+        model.addAttribute("transactionTypes", TransactionType.values());
         return "category-form";
     }
 
     @GetMapping("/edit/{id}")
     public String showEditForm(@PathVariable Long id, Model model) {
         model.addAttribute("category", categoryService.getCategoryById(id));
-        model.addAttribute("transactionTypes", Transaction.TransactionType.values());
+        model.addAttribute("transactionTypes", TransactionType.values());
         return "category-form";
     }
 

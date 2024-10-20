@@ -21,13 +21,13 @@
     </div>
     <div class="col-md-6">
       <h4>Итого</h4>
-      <p>Общий доход: <span th:text="${#numbers.formatDecimal(report.totalIncome, 1, 2)}"></span></p>
-      <p>Общий расход: <span th:text="${#numbers.formatDecimal(report.totalExpense, 1, 2)}"></span></p>
+      <p>Общий доход: <span th:text="${#numbers.formatDecimal(report.typeTotals['INCOME'], 1, 2)}"></span></p>
+      <p>Общий расход: <span th:text="${#numbers.formatDecimal(report.typeTotals['EXPENSE'], 1, 2)}"></span></p>
       <p>Всего дней: <span th:text="${report.totalDays}"></span></p>
       <p>Дней с покупками: <span th:text="${report.daysWithTransactions}"></span></p>
       <p>Ежедневный средний расход: <span th:text="${#numbers.formatDecimal(report.averageExpensePerDay, 1, 2)}"></span></p>
       <p>Средний расход в дни с транзакциями: <span th:text="${#numbers.formatDecimal(report.averageExpensePerTransactionDay, 1, 2)}"></span></p>
-      <p>Баланс: <span th:text="${#numbers.formatDecimal(report.totalIncome - report.totalExpense, 1, 2)}"></span></p>
+      <p>Баланс: <span th:text="${#numbers.formatDecimal((report.typeTotals['INCOME'] ?: 0) - (report.typeTotals['EXPENSE'] ?: 0), 1, 2)}"></span></p>
     </div>
   </div>
 
@@ -66,12 +66,13 @@
 </div>
 
 <script th:inline="javascript">
+  var typeTotals = /*[[${report.typeTotals}]]*/ {};
+  var totalIncome = typeTotals['INCOME'] || 0;
+  var totalExpense = typeTotals['EXPENSE'] || 0;
+  var categoryTotals = [[${categoryTotals}]];
+
   var incomeExpenseCtx = document.getElementById('incomeExpenseChart').getContext('2d');
   var categoryCtx = document.getElementById('categoryChart').getContext('2d');
-
-  var totalIncome = [[${report.totalIncome}]];
-  var totalExpense = [[${report.totalExpense}]];
-  var categoryTotals = [[${report.categoryTotals}]];
 
   new Chart(incomeExpenseCtx, {
     type: 'pie',
@@ -85,6 +86,7 @@
       }]
     }
   });
+
 
   new Chart(categoryCtx, {
     type: 'bar',

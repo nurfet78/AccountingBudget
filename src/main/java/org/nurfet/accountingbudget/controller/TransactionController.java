@@ -83,9 +83,9 @@ public class TransactionController {
         double totalAmount;
 
         if (categoryName == null || "All".equals(categoryName)) {
-            transactions = transactionService.getTransactionsByDateRange(startDate, endDate);
+            transactions = transactionService.getFilteredTransactions(startDate, endDate, null, null);
         } else {
-            transactions = transactionService.getTransactionsByDateRangeAndCategory(startDate, endDate, categoryName);
+            transactions = transactionService.getFilteredTransactions(startDate, endDate, categoryName, null);
         }
         totalAmount = transactions.stream().mapToDouble(Transaction::getAmount).sum();
 
