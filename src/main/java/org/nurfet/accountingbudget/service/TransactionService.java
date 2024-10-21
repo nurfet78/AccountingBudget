@@ -25,7 +25,7 @@ public interface TransactionService {
 
     ReportDTO generateDetailedReport(LocalDate startDate, LocalDate endDate);
 
-    Map<TransactionType, Double> calculateTypeTotals();
+    Map<TransactionType, Double> calculateTypeTotals(LocalDate startDate, LocalDate endDate);
 
-    Map<String, Double> calculateCategoryTotals();
+    Map<String, Double> calculateCategoryTotals(LocalDate startDate, LocalDate endDate);
 }

@@ -1,7 +1,6 @@
 package org.nurfet.accountingbudget.service;
 
 import org.nurfet.accountingbudget.model.Category;
-import org.nurfet.accountingbudget.model.Transaction;
 
 import java.util.List;
 

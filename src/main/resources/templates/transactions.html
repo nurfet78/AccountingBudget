@@ -10,6 +10,20 @@
 <div class="container mt-5">
     <a th:href="@{/}" class="btn btn-primary mb-3">Вернуться на главную</a>
     <br />
+    <div class="mb-3">
+        <h4>Лимит расходов</h4>
+        <div th:if="${currentLimit == null}">
+            <p>Лимит не установлен</p>
+        </div>
+        <div th:if="${currentLimit != null}">
+            <p>Текущий лимит: <span th:text="${#numbers.formatDecimal(currentLimit.amount, 1, 2)}"></span></p>
+            <p>Период: <span th:text="${currentLimit.periodDisplayName}"></span></p>
+            <form th:action="@{/expense-limit/remove}" method="post" style="display: inline;">
+                <button type="submit" class="btn btn-danger btn-sm mb-3">Удалить лимит</button>
+            </form>
+        </div>
+        <a th:href="@{/expense-limit}" class="btn btn-info">Установить лимит</a>
+    </div>
     <h1>Финансовые операции</h1>
     <a th:href="@{/transactions/add}" class="btn btn-success mb-3">Новая запись</a>
 

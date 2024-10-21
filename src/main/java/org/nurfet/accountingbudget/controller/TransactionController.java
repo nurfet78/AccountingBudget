@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.nurfet.accountingbudget.model.Category;
 import org.nurfet.accountingbudget.model.Transaction;
 import org.nurfet.accountingbudget.service.CategoryService;
+import org.nurfet.accountingbudget.service.ExpenseLimitService;
 import org.nurfet.accountingbudget.service.TransactionService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -22,9 +23,13 @@ public class TransactionController {
 
     private final CategoryService categoryService;
 
+    private final ExpenseLimitService expenseLimitService;
+
     @GetMapping
     public String getTransactions(Model model) {
         model.addAttribute("transactions", transactionService.getAllTransactions());
+
+        model.addAttribute("currentLimit", expenseLimitService.getCurrentLimit());
 
         return "transactions";
     }

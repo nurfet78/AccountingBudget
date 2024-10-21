@@ -5,12 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.nurfet.accountingbudget.dto.ReportDTO;
 import org.nurfet.accountingbudget.exception.NotFoundException;
 import org.nurfet.accountingbudget.model.Category;
+import org.nurfet.accountingbudget.model.ExpenseLimit;
 import org.nurfet.accountingbudget.model.TransactionType;
 import org.nurfet.accountingbudget.observer.model.SendMessage;
 import org.nurfet.accountingbudget.model.Transaction;
 import org.nurfet.accountingbudget.repository.CategoryRepository;
 import org.nurfet.accountingbudget.repository.TransactionRepository;
 import org.nurfet.accountingbudget.observer.service.MailEventPublisherService;
+import org.nurfet.accountingbudget.service.ExpenseLimitService;
 import org.nurfet.accountingbudget.service.TransactionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +36,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final MailEventPublisherService mailEventPublisherService;
 
-    private static final double EXPENSE_LIMIT = 5000000.0;
+    private final ExpenseLimitService expenseLimitService;
 
 
     @Override
@@ -43,14 +45,23 @@ public class TransactionServiceImpl implements TransactionService {
 
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        double totalExpenses = calculateTypeTotals().getOrDefault(EXPENSE, 0.0);
-        if (totalExpenses > EXPENSE_LIMIT) {
-            mailEventPublisherService.publishMailCreatedEvent(SendMessage.create("Превышен лимит расходов! Текущая сумма: " + totalExpenses));
+        ExpenseLimit currentLimit = expenseLimitService.getCurrentLimit();
+        if (currentLimit != null && transaction.getType() == TransactionType.EXPENSE) {
+            LocalDate startDate = currentLimit.getStartDate();
+            LocalDate endDate = LocalDate.now();
+
+            double totalExpenses = transactionRepository.findByDateBetweenAndType(startDate, endDate, TransactionType.EXPENSE)
+                    .stream()
+                    .mapToDouble(Transaction::getAmount)
+                    .sum();
+
+            if (totalExpenses > currentLimit.getAmount()) {
+                mailEventPublisherService.publishMailCreatedEvent(SendMessage.create("Превышен лимит расходов! Текущая сумма: " + totalExpenses));
+            }
         }
 
         return savedTransaction;
     }
-
 
     @Override
     public List<Transaction> getTransactionsByCategory(String categoryName) {
@@ -93,7 +104,7 @@ public class TransactionServiceImpl implements TransactionService {
     public ReportDTO generateDetailedReport(LocalDate startDate, LocalDate endDate) {
         List<Transaction> transactionList = getFilteredTransactions(startDate, endDate, null, null);
 
-        Map<TransactionType, Double> totals = calculateTypeTotals();
+        Map<TransactionType, Double> totals = calculateTypeTotals(startDate, endDate);
         double totalExpense = totals.getOrDefault(EXPENSE, 0.0);
         long totalDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         long totalDaysWithTransaction = transactionList.stream()
@@ -114,14 +125,18 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public Map<TransactionType, Double> calculateTypeTotals() {
+    public Map<TransactionType, Double> calculateTypeTotals(LocalDate startDate, LocalDate endDate) {
         return transactionRepository.findAll().stream()
+                .filter(t -> (startDate == null || !t.getDate().isBefore(startDate))
+                            && (endDate == null || !t.getDate().isAfter(endDate)))
                 .collect(Collectors.groupingBy(Transaction::getType, Collectors.summingDouble(Transaction::getAmount)));
     }
 
     @Override
-    public Map<String, Double> calculateCategoryTotals() {
+    public Map<String, Double> calculateCategoryTotals(LocalDate startDate, LocalDate endDate) {
         return transactionRepository.findAll().stream()
+                .filter(t -> (startDate == null || !t.getDate().isBefore(startDate))
+                        && (endDate == null || !t.getDate().isAfter(endDate)))
                 .collect(Collectors.groupingBy(t -> t.getCategory().getName(), Collectors.summingDouble(Transaction::getAmount)));
     }
 }

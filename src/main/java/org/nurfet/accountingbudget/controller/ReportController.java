@@ -30,7 +30,7 @@ public class ReportController {
 
 
         model.addAttribute("report", report);
-        model.addAttribute("categoryTotals", transactionService.calculateCategoryTotals());
+        model.addAttribute("categoryTotals", transactionService.calculateCategoryTotals(startDate, endDate));
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
 
