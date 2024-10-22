@@ -1,5 +1,6 @@
 package org.nurfet.accountingbudget.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,8 +16,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,11 +35,10 @@ public class ExpenseLimitServiceTest {
     @MockBean
     private MailEventPublisherService mailEventPublisherService;
 
-    private static final LocalDate CURRENT_DATE = LocalDate.of(2024, 10, 21);
-    private static final LocalDate WEEK_LATER = CURRENT_DATE.plusWeeks(1);
-    private static final LocalDate NEXT_MONTH = CURRENT_DATE.plusMonths(1);
 
-    private List<ExpenseLimit> limits;
+    private static final LocalDate CURRENT_DATE = LocalDate.of(2024, 10, 7);
+    private static final LocalDate WEEK_LATER = CURRENT_DATE.plusWeeks(1).minusDays(1);
+    private static final LocalDate NEXT_MONTH = CURRENT_DATE.plusMonths(1).withDayOfMonth(1).minusDays(1);
 
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
@@ -48,13 +47,7 @@ public class ExpenseLimitServiceTest {
 
     @BeforeEach
     void setUp() {
-        limits = new ArrayList<>();
-        when(expenseLimitRepository.findAll()).thenReturn(limits);
-        when(expenseLimitRepository.save(any(ExpenseLimit.class))).thenAnswer(invocation -> {
-            return invocation.<ExpenseLimit>getArgument(0);
-        });
-
-        // Устанавливаем текущую дату для всех тестов
+        when(expenseLimitRepository.save(any(ExpenseLimit.class))).thenAnswer(invocation -> invocation.getArgument(0));
         System.setProperty("expense-limit.current-date", CURRENT_DATE.toString());
         System.out.println("Текущая дата установлена в setUp: " + CURRENT_DATE);
     }
@@ -66,152 +59,129 @@ public class ExpenseLimitServiceTest {
 
     @Test
     void testWeeklyLimitReset() {
-        // Устанавливаем лимит на неделю назад
         ExpenseLimit weeklyLimit = new ExpenseLimit();
         weeklyLimit.setAmount(1000);
-        weeklyLimit.setPeriod(ExpenseLimit.LimitPeriod.WEEKLY);
-        weeklyLimit.setStartDate(CURRENT_DATE.minusWeeks(1));
-        weeklyLimit.updateNextResetDate();
-        limits.add(weeklyLimit);
+        weeklyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.WEEKLY, CURRENT_DATE.minusWeeks(1));
+        when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(weeklyLimit));
 
-        expenseLimitService.checkAndUpdateAllLimits();
+        expenseLimitService.checkAndResetLimitIfNeeded();
 
-        assertEquals(CURRENT_DATE, weeklyLimit.getStartDate());
-        assertEquals(CURRENT_DATE.plusWeeks(1), weeklyLimit.getNextResetDate());
+        LocalDate expectedStartDate = CURRENT_DATE;
+        LocalDate expectedEndDate = expectedStartDate.plusDays(6);
 
-        verifyLimitResetNotification(1000);
+        LocalDate startDate = CURRENT_DATE.minusWeeks(1);
+        LocalDate endDate = CURRENT_DATE.minusDays(1);
+
+
+        assertEquals(expectedStartDate, weeklyLimit.getStartDate(), "Дата начала должна быть текущей датой");
+        assertEquals(expectedEndDate, weeklyLimit.getEndDate(), "Дата окончания должна быть через 6 дней от даты начала");
+        verifyLimitResetNotification(1000.0, startDate, endDate, expectedStartDate, ExpenseLimit.LimitPeriod.WEEKLY);
     }
 
     @Test
     void testWeeklyLimitNoReset() {
-        // Устанавливаем лимит на текущую дату
         ExpenseLimit weeklyLimit = new ExpenseLimit();
         weeklyLimit.setAmount(1000);
-        weeklyLimit.setPeriod(ExpenseLimit.LimitPeriod.WEEKLY);
-        weeklyLimit.setStartDate(CURRENT_DATE);
-        weeklyLimit.updateNextResetDate();
-        limits.add(weeklyLimit);
+        weeklyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.WEEKLY, CURRENT_DATE);
+        when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(weeklyLimit));
 
-        // Устанавливаем текущую дату
-        System.setProperty("expense-limit.current-date", CURRENT_DATE.toString());
-        expenseLimitService.checkAndUpdateAllLimits();
+        expenseLimitService.checkAndResetLimitIfNeeded();
 
         assertEquals(CURRENT_DATE, weeklyLimit.getStartDate());
-        assertEquals(WEEK_LATER, weeklyLimit.getNextResetDate());
-
+        assertEquals(WEEK_LATER, weeklyLimit.getEndDate());
         verify(mailEventPublisherService, never()).publishMailCreatedEvent(any(SendMessage.class));
     }
 
     @Test
     void testMonthlyLimitReset() {
-        // Устанавливаем лимит на месяц назад
         ExpenseLimit monthlyLimit = new ExpenseLimit();
         monthlyLimit.setAmount(5000);
-        monthlyLimit.setPeriod(ExpenseLimit.LimitPeriod.MONTHLY);
-        monthlyLimit.setStartDate(CURRENT_DATE.minusMonths(1));
-        monthlyLimit.updateNextResetDate();
-        limits.add(monthlyLimit);
+        monthlyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.MONTHLY, CURRENT_DATE.minusMonths(1));
+        when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(monthlyLimit));
 
-        expenseLimitService.checkAndUpdateAllLimits();
+        expenseLimitService.checkAndResetLimitIfNeeded();
 
-        assertEquals(CURRENT_DATE, monthlyLimit.getStartDate());
-        assertEquals(CURRENT_DATE.plusMonths(1).withDayOfMonth(1), monthlyLimit.getNextResetDate());
+        LocalDate expectedStartDate = CURRENT_DATE;
+        LocalDate expectedEndDate = expectedStartDate.plusMonths(1).minusDays(1);
 
-        verifyLimitResetNotification(5000);
+        LocalDate startDate = CURRENT_DATE.minusMonths(1);
+        LocalDate endDate = CURRENT_DATE.minusDays(1);
+
+        assertEquals(expectedStartDate, monthlyLimit.getStartDate(), "Дата начала должна быть текущей датой");
+        assertEquals(expectedEndDate, monthlyLimit.getEndDate(), "Дата окончания должна быть через месяц минус один день от новой даты начала");
+        verifyLimitResetNotification(5000.0, startDate, endDate, expectedStartDate, ExpenseLimit.LimitPeriod.MONTHLY);
     }
 
     @Test
     void testMonthlyLimitNoReset() {
-        // Устанавливаем лимит на начало текущего месяца
         ExpenseLimit monthlyLimit = new ExpenseLimit();
         monthlyLimit.setAmount(5000);
-        monthlyLimit.setPeriod(ExpenseLimit.LimitPeriod.MONTHLY);
-        monthlyLimit.setStartDate(CURRENT_DATE.withDayOfMonth(1));
-        monthlyLimit.updateNextResetDate();
-        limits.add(monthlyLimit);
+        monthlyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.MONTHLY, CURRENT_DATE.withDayOfMonth(1));
+        when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(monthlyLimit));
 
-        // Устанавливаем текущую дату
-        System.setProperty("expense-limit.current-date", CURRENT_DATE.toString());
-        expenseLimitService.checkAndUpdateAllLimits();
+        expenseLimitService.checkAndResetLimitIfNeeded();
 
         assertEquals(CURRENT_DATE.withDayOfMonth(1), monthlyLimit.getStartDate());
-        assertEquals(NEXT_MONTH.withDayOfMonth(1), monthlyLimit.getNextResetDate());
-
+        assertEquals(NEXT_MONTH, monthlyLimit.getEndDate());
         verify(mailEventPublisherService, never()).publishMailCreatedEvent(any(SendMessage.class));
     }
 
     @Test
     void testLimitResetAtMonthEnd() {
-        // Меняем текущую дату на конец месяца
         LocalDate monthEnd = CURRENT_DATE.withDayOfMonth(CURRENT_DATE.lengthOfMonth());
+        LocalDate nextMonthStart = monthEnd.plusDays(1);
         System.setProperty("expense-limit.current-date", monthEnd.toString());
 
-        // Устанавливаем лимит на начало текущего месяца
         ExpenseLimit monthlyLimit = new ExpenseLimit();
         monthlyLimit.setAmount(5000);
-        monthlyLimit.setPeriod(ExpenseLimit.LimitPeriod.MONTHLY);
-        monthlyLimit.setStartDate(monthEnd.withDayOfMonth(1));
-        monthlyLimit.updateNextResetDate();
-        limits.add(monthlyLimit);
+        monthlyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.MONTHLY, CURRENT_DATE.withDayOfMonth(1));
+        when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(monthlyLimit));
 
-        expenseLimitService.checkAndUpdateAllLimits();
+        expenseLimitService.checkAndResetLimitIfNeeded();
 
-        assertEquals(monthEnd, monthlyLimit.getStartDate(), "Дату начала следует обновить до конца месяца");
-        assertEquals(monthEnd.plusMonths(1).withDayOfMonth(1), monthlyLimit.getNextResetDate(),
-                "Следующая дата сброса должна идти первым числом следующего месяца");
-
-        verifyLimitResetNotification(5000);
-
-        // Очищаем свойство после теста
-        System.clearProperty("expense-limit.current-date");
+        // Проверяем, что лимит сбрасывается в последний день месяца
+        assertEquals(nextMonthStart, monthlyLimit.getStartDate(), "Дата начала должна быть установлена на первый день следующего месяца");
+        assertEquals(nextMonthStart.plusMonths(1).minusDays(1), monthlyLimit.getEndDate(), "Дата окончания должна быть последним днем следующего месяца");
+        verifyLimitResetNotification(5000.0, CURRENT_DATE.withDayOfMonth(1), monthEnd, nextMonthStart, ExpenseLimit.LimitPeriod.MONTHLY);
     }
 
     @Test
     void testLimitResetAtNextMonthStart() {
-        // Меняем текущую дату на начало следующего месяца
-        LocalDate nextMonthStart = NEXT_MONTH.withDayOfMonth(1);
+        LocalDate nextMonthStart = CURRENT_DATE.plusMonths(1).withDayOfMonth(1);
         System.setProperty("expense-limit.current-date", nextMonthStart.toString());
 
-        // Устанавливаем лимит на текущий месяц
         ExpenseLimit monthlyLimit = new ExpenseLimit();
         monthlyLimit.setAmount(5000);
-        monthlyLimit.setPeriod(ExpenseLimit.LimitPeriod.MONTHLY);
-        monthlyLimit.setStartDate(CURRENT_DATE.withDayOfMonth(1));
-        monthlyLimit.updateNextResetDate();
-        limits.add(monthlyLimit);
+        monthlyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.MONTHLY, CURRENT_DATE.withDayOfMonth(1));
+        when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(monthlyLimit));
 
-        expenseLimitService.checkAndUpdateAllLimits();
+        expenseLimitService.checkAndResetLimitIfNeeded();
 
-        assertEquals(nextMonthStart, monthlyLimit.getStartDate(), "Дату начала следует обновить до начала следующего месяца");
-        assertEquals(nextMonthStart.plusMonths(1).withDayOfMonth(1), monthlyLimit.getNextResetDate(),
-                "Следующая дата сброса должна приходиться на первый день месяца, следующего за следующим");
-
-        verifyLimitResetNotification(5000);
-
-        // Очищаем свойство после теста
-        System.clearProperty("expense-limit.current-date");
+        assertEquals(nextMonthStart, monthlyLimit.getStartDate(), "Дату начала следует обновить до первого дня следующего месяца");
+        assertEquals(nextMonthStart.plusMonths(1).minusDays(1), monthlyLimit.getEndDate(), "Дата окончания должна быть последним днем следующего месяца");
+        verifyLimitResetNotification(5000.0, CURRENT_DATE.withDayOfMonth(1), nextMonthStart.minusDays(1),
+                nextMonthStart, ExpenseLimit.LimitPeriod.MONTHLY);
     }
 
-    private void verifyLimitResetNotification(double expectedAmount) {
+    private void verifyLimitResetNotification(double expectedAmount, LocalDate startDate, LocalDate endDate,
+                                              LocalDate newStartDate, ExpenseLimit.LimitPeriod periodType) {
         ArgumentCaptor<SendMessage> messageCaptor = ArgumentCaptor.forClass(SendMessage.class);
         verify(mailEventPublisherService).publishMailCreatedEvent(messageCaptor.capture());
         SendMessage capturedMessage = messageCaptor.getValue();
 
-        System.out.println("Содержание полученного сообщения: " + capturedMessage.getContent());
+        String periodTypeString = (periodType == ExpenseLimit.LimitPeriod.WEEKLY) ? "Неделя" : "Месяц";
 
-        assertTrue(capturedMessage.getContent().contains("лимит расходов"),
-                "Сообщение должно содержать фразу 'лимит расходов'");
-        assertTrue(capturedMessage.getContent().contains("был сброшен"),
-                "Сообщение должно содержать фразу 'был сброшен'");
+        String expectedMessage = String.format(
+                "Ваш лимит расходов в размере %.2f был сброшен. Тип периода: '%s'. Старый период: %s - %s. Новый период начался с %s.",
+                expectedAmount,
+                periodTypeString,
+                startDate, endDate, newStartDate
+        );
 
-// Проверяем сумму с учетом форматирования
-        String formattedAmount = String.format("%.2f", expectedAmount).replace(".", ",");
-        assertTrue(capturedMessage.getContent().contains(formattedAmount),
-                "Сообщение должно содержать ожидаемую сумму: " + formattedAmount);
+        System.out.println("Ожидаемое сообщение:   " + expectedMessage);
+        System.out.println("Фактическое сообщение: " + capturedMessage.getContent());
 
-        assertTrue(capturedMessage.getContent().contains("Старый период"),
-                "Сообщение должно содержать фразу 'Старый период'");
-        assertTrue(capturedMessage.getContent().contains("Новый период"),
-                "Сообщение должно содержать фразу 'Новый период'");
+        assertEquals(expectedMessage, capturedMessage.getContent(),
+                "Сообщение должно точно соответствовать ожидаемому формату");
     }
 }

@@ -27,7 +27,7 @@ public class ExpenseLimitController {
 
     @PostMapping("/set")
     public String setLimit(@ModelAttribute ExpenseLimit newLimit) {
-        expenseLimitService.setLimit(newLimit.getAmount(), newLimit.getPeriod());
+        expenseLimitService.setOrUpdateLimit(newLimit.getAmount(), newLimit.getPeriod());
         return "redirect:/expense-limit";
     }
 

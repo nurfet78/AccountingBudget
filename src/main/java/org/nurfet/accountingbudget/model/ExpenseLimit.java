@@ -24,37 +24,45 @@ public class ExpenseLimit extends AbstractEntity {
 
     private LocalDate startDate;
 
+    private LocalDate endDate;
+
     private LocalDate nextResetDate;
 
-    public void updateNextResetDate() {
-        if (this.period == LimitPeriod.WEEKLY) {
-            this.nextResetDate = this.startDate.plusWeeks(1);
-        } else if (this.period == LimitPeriod.MONTHLY) {
-            this.nextResetDate = this.startDate.plusMonths(1).withDayOfMonth(1);
-        } else {
-            this.nextResetDate = null; // Для бессрочного лимита
+    public void setLimitPeriod(LimitPeriod period, LocalDate startDate) {
+        this.period = period;
+        this.startDate = startDate;
+
+        switch (period) {
+            case WEEKLY:
+                this.endDate = startDate.plusWeeks(1).minusDays(1);
+                break;
+            case MONTHLY:
+                this.endDate = startDate.plusMonths(1).minusDays(1);
+                break;
+            case INDEFINITE:
+                this.endDate = null;
+                break;
         }
-        System.out.println("Вызван метод updateNextResetDate. Дата начала: " + this.startDate + ", Дата следующего сброса: " + this.nextResetDate);
     }
 
+    @Getter
     public enum LimitPeriod {
-        MONTHLY, WEEKLY, INDEFINITE
+        MONTHLY("Месяц"), WEEKLY("Неделя"), INDEFINITE("Бессрочно");
+
+        private final String title;
+
+        LimitPeriod(String title) {
+            this.title = title;
+        }
     }
 
+    //для веб-интерфейса
     public String getPeriodDisplayName() {
         return switch (this.period) {
             case MONTHLY -> "В месяц";
             case WEEKLY -> "В неделю";
             case INDEFINITE -> "Бессрочно";
             default -> "Неизвестно";
-        };
-    }
-
-    public LocalDate getStartDateForPreviousPeriod() {
-        return switch (this.period) {
-            case WEEKLY -> this.startDate.minusWeeks(1);
-            case MONTHLY -> this.startDate.minusMonths(1);
-            case INDEFINITE -> this.startDate;
         };
     }
 }

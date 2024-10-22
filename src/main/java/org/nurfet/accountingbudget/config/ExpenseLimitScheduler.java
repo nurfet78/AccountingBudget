@@ -13,6 +13,6 @@ public class ExpenseLimitScheduler {
 
     @Scheduled(cron = "0 0 0 * * ?") // Выполняется каждый день в полночь
     public void checkAndUpdateLimits() {
-        expenseLimitService.checkAndUpdateAllLimits();
+        expenseLimitService.checkAndResetLimitIfNeeded();
     }
 }
