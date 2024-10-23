@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -85,14 +86,17 @@ public class TransactionController {
         }
 
         List<Transaction> transactions;
-        double totalAmount;
+        BigDecimal totalAmount;
 
         if (categoryName == null || "All".equals(categoryName)) {
             transactions = transactionService.getFilteredTransactions(startDate, endDate, null, null);
         } else {
             transactions = transactionService.getFilteredTransactions(startDate, endDate, categoryName, null);
         }
-        totalAmount = transactions.stream().mapToDouble(Transaction::getAmount).sum();
+
+        totalAmount = transactions.stream()
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         model.addAttribute("transactions", transactions);
         model.addAttribute("categoryName", categoryName);

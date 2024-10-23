@@ -6,7 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.nurfet.accountingbudget.model.Transaction;
 import org.nurfet.accountingbudget.model.TransactionType;
+import org.nurfet.accountingbudget.util.BigDecimalSummaryStatistics;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -18,13 +20,23 @@ public class ReportDTO {
 
     private List<Transaction> transactions;
 
-    private Map<TransactionType, Double> typeTotals;
+    private BigDecimalSummaryStatistics incomeStats;
+
+    private BigDecimalSummaryStatistics expenseStats;
 
     private long totalDays;
 
     private long daysWithTransactions;
 
-    private double averageExpensePerDay;
+    private BigDecimal averageExpensePerDay;
 
-    private double averageExpensePerTransactionDay;
+    private BigDecimal averageExpensePerTransactionDay;
+
+    private BigDecimal maxDailyExpense;
+
+    private BigDecimal minDailyExpense;
+
+    private BigDecimal maxSingleIncome;
+
+    private BigDecimal minSingleIncome;
 }

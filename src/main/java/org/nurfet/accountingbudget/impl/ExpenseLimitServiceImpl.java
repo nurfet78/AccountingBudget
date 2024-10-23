@@ -9,6 +9,7 @@ import org.nurfet.accountingbudget.repository.ExpenseLimitRepository;
 import org.nurfet.accountingbudget.service.ExpenseLimitService;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Service
@@ -22,7 +23,7 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
 
 
     @Override
-    public void setOrUpdateLimit(double amount, ExpenseLimit.LimitPeriod period) {
+    public void setOrUpdateLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period) {
         ExpenseLimit limit = getCurrentLimit();
         if (limit == null) {
             limit = new ExpenseLimit();

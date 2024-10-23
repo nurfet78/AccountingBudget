@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -17,7 +18,7 @@ import java.time.LocalDate;
 @Entity
 public class ExpenseLimit extends AbstractEntity {
 
-    private double amount;
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     private LimitPeriod period;

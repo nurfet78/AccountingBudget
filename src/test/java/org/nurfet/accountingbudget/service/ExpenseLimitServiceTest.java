@@ -14,6 +14,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -58,7 +59,7 @@ public class ExpenseLimitServiceTest {
     @Test
     void testWeeklyLimitReset() {
         ExpenseLimit weeklyLimit = new ExpenseLimit();
-        weeklyLimit.setAmount(1000);
+        weeklyLimit.setAmount(new BigDecimal("1000.00"));
         weeklyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.WEEKLY, CURRENT_DATE.minusWeeks(1));
         when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(weeklyLimit));
 
@@ -73,13 +74,13 @@ public class ExpenseLimitServiceTest {
 
         assertEquals(expectedStartDate, weeklyLimit.getStartDate(), "Дата начала должна быть текущей датой");
         assertEquals(expectedEndDate, weeklyLimit.getEndDate(), "Дата окончания должна быть через 6 дней от даты начала");
-        verifyLimitResetNotification(1000.0, startDate, endDate, expectedStartDate, ExpenseLimit.LimitPeriod.WEEKLY);
+        verifyLimitResetNotification(new BigDecimal("1000.00"), startDate, endDate, expectedStartDate, ExpenseLimit.LimitPeriod.WEEKLY);
     }
 
     @Test
     void testWeeklyLimitNoReset() {
         ExpenseLimit weeklyLimit = new ExpenseLimit();
-        weeklyLimit.setAmount(1000);
+        weeklyLimit.setAmount(new BigDecimal("1000.00"));
         weeklyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.WEEKLY, CURRENT_DATE);
         when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(weeklyLimit));
 
@@ -93,7 +94,7 @@ public class ExpenseLimitServiceTest {
     @Test
     void testMonthlyLimitReset() {
         ExpenseLimit monthlyLimit = new ExpenseLimit();
-        monthlyLimit.setAmount(5000);
+        monthlyLimit.setAmount(new BigDecimal("5000.00"));
         monthlyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.MONTHLY, CURRENT_DATE.minusMonths(1));
         when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(monthlyLimit));
 
@@ -107,13 +108,13 @@ public class ExpenseLimitServiceTest {
 
         assertEquals(expectedStartDate, monthlyLimit.getStartDate(), "Дата начала должна быть текущей датой");
         assertEquals(expectedEndDate, monthlyLimit.getEndDate(), "Дата окончания должна быть через месяц минус один день от новой даты начала");
-        verifyLimitResetNotification(5000.0, startDate, endDate, expectedStartDate, ExpenseLimit.LimitPeriod.MONTHLY);
+        verifyLimitResetNotification(new BigDecimal("5000.00"), startDate, endDate, expectedStartDate, ExpenseLimit.LimitPeriod.MONTHLY);
     }
 
     @Test
     void testMonthlyLimitNoReset() {
         ExpenseLimit monthlyLimit = new ExpenseLimit();
-        monthlyLimit.setAmount(5000);
+        monthlyLimit.setAmount(new BigDecimal("5000.00"));
         monthlyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.MONTHLY, CURRENT_DATE.withDayOfMonth(1));
         when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(monthlyLimit));
 
@@ -131,7 +132,7 @@ public class ExpenseLimitServiceTest {
         System.setProperty("expense-limit.current-date", monthEnd.toString());
 
         ExpenseLimit monthlyLimit = new ExpenseLimit();
-        monthlyLimit.setAmount(5000);
+        monthlyLimit.setAmount(new BigDecimal("5000.00"));
         monthlyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.MONTHLY, CURRENT_DATE.withDayOfMonth(1));
         when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(monthlyLimit));
 
@@ -140,7 +141,7 @@ public class ExpenseLimitServiceTest {
         // Проверяем, что лимит сбрасывается в последний день месяца
         assertEquals(nextMonthStart, monthlyLimit.getStartDate(), "Дата начала должна быть установлена на первый день следующего месяца");
         assertEquals(nextMonthStart.plusMonths(1).minusDays(1), monthlyLimit.getEndDate(), "Дата окончания должна быть последним днем следующего месяца");
-        verifyLimitResetNotification(5000.0, CURRENT_DATE.withDayOfMonth(1), monthEnd, nextMonthStart, ExpenseLimit.LimitPeriod.MONTHLY);
+        verifyLimitResetNotification(new BigDecimal("5000.00"), CURRENT_DATE.withDayOfMonth(1), monthEnd, nextMonthStart, ExpenseLimit.LimitPeriod.MONTHLY);
     }
 
     @Test
@@ -149,7 +150,7 @@ public class ExpenseLimitServiceTest {
         System.setProperty("expense-limit.current-date", nextMonthStart.toString());
 
         ExpenseLimit monthlyLimit = new ExpenseLimit();
-        monthlyLimit.setAmount(5000);
+        monthlyLimit.setAmount(new BigDecimal("5000.00"));
         monthlyLimit.setLimitPeriod(ExpenseLimit.LimitPeriod.MONTHLY, CURRENT_DATE.withDayOfMonth(1));
         when(expenseLimitRepository.findTopByOrderByStartDateDesc()).thenReturn(Optional.of(monthlyLimit));
 
@@ -157,11 +158,11 @@ public class ExpenseLimitServiceTest {
 
         assertEquals(nextMonthStart, monthlyLimit.getStartDate(), "Дату начала следует обновить до первого дня следующего месяца");
         assertEquals(nextMonthStart.plusMonths(1).minusDays(1), monthlyLimit.getEndDate(), "Дата окончания должна быть последним днем следующего месяца");
-        verifyLimitResetNotification(5000.0, CURRENT_DATE.withDayOfMonth(1), nextMonthStart.minusDays(1),
+        verifyLimitResetNotification(new BigDecimal("5000.00"), CURRENT_DATE.withDayOfMonth(1), nextMonthStart.minusDays(1),
                 nextMonthStart, ExpenseLimit.LimitPeriod.MONTHLY);
     }
 
-    private void verifyLimitResetNotification(double expectedAmount, LocalDate startDate, LocalDate endDate,
+    private void verifyLimitResetNotification(BigDecimal expectedAmount, LocalDate startDate, LocalDate endDate,
                                               LocalDate newStartDate, ExpenseLimit.LimitPeriod periodType) {
         ArgumentCaptor<SendMessage> messageCaptor = ArgumentCaptor.forClass(SendMessage.class);
         verify(mailEventPublisherService).publishMailCreatedEvent(messageCaptor.capture());

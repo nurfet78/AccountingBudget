@@ -4,6 +4,7 @@ import org.nurfet.accountingbudget.dto.ReportDTO;
 import org.nurfet.accountingbudget.model.Transaction;
 import org.nurfet.accountingbudget.model.TransactionType;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,7 @@ public interface TransactionService {
 
     ReportDTO generateDetailedReport(LocalDate startDate, LocalDate endDate);
 
-    Map<TransactionType, Double> calculateTypeTotals(LocalDate startDate, LocalDate endDate);
+    Map<TransactionType, BigDecimal> calculateTypeTotals(LocalDate startDate, LocalDate endDate);
 
-    Map<String, Double> calculateCategoryTotals(LocalDate startDate, LocalDate endDate);
+    Map<String, BigDecimal> calculateCategoryTotals(LocalDate startDate, LocalDate endDate);
 }

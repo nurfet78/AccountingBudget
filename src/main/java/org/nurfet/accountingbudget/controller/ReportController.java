@@ -9,7 +9,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
 
 
 @Controller
@@ -20,6 +22,7 @@ public class ReportController {
 
     private final TransactionService transactionService;
 
+
     @GetMapping
     public String showReport(Model model) {
 
@@ -27,6 +30,10 @@ public class ReportController {
         LocalDate endDate = LocalDate.now();
 
         ReportDTO report = transactionService.generateDetailedReport(startDate, endDate);
+
+        Map<String, BigDecimal> res = transactionService.calculateCategoryTotals(startDate, endDate);
+
+        log.info("Category info: {}", res.get("Зарплата").toString());
 
 
         model.addAttribute("report", report);

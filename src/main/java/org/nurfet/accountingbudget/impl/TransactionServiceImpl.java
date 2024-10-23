@@ -14,9 +14,13 @@ import org.nurfet.accountingbudget.repository.TransactionRepository;
 import org.nurfet.accountingbudget.observer.service.MailEventPublisherService;
 import org.nurfet.accountingbudget.service.ExpenseLimitService;
 import org.nurfet.accountingbudget.service.TransactionService;
+import org.nurfet.accountingbudget.util.BigDecimalCollectors;
+import org.nurfet.accountingbudget.util.BigDecimalSummaryStatistics;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -24,6 +28,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.nurfet.accountingbudget.model.TransactionType.EXPENSE;
+import static org.nurfet.accountingbudget.util.BigDecimalSummaryStatistics.summarizingBigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -50,13 +55,15 @@ public class TransactionServiceImpl implements TransactionService {
             LocalDate startDate = currentLimit.getStartDate();
             LocalDate endDate = LocalDate.now();
 
-            double totalExpenses = transactionRepository.findByDateBetweenAndType(startDate, endDate, TransactionType.EXPENSE)
+            BigDecimal totalExpenses = transactionRepository.findByDateBetweenAndType(startDate, endDate, TransactionType.EXPENSE)
                     .stream()
-                    .mapToDouble(Transaction::getAmount)
-                    .sum();
+                    .map(Transaction::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            if (totalExpenses > currentLimit.getAmount()) {
-                mailEventPublisherService.publishMailCreatedEvent(SendMessage.create("Превышен лимит расходов! Текущая сумма: " + totalExpenses));
+            if (totalExpenses.compareTo(currentLimit.getAmount()) > 0) {
+                mailEventPublisherService.publishMailCreatedEvent(
+                        SendMessage.create("Превышен лимит расходов! Текущая сумма: " + totalExpenses)
+                );
             }
         }
 
@@ -104,39 +111,62 @@ public class TransactionServiceImpl implements TransactionService {
     public ReportDTO generateDetailedReport(LocalDate startDate, LocalDate endDate) {
         List<Transaction> transactionList = getFilteredTransactions(startDate, endDate, null, null);
 
-        Map<TransactionType, Double> totals = calculateTypeTotals(startDate, endDate);
-        double totalExpense = totals.getOrDefault(EXPENSE, 0.0);
+        var typeStatistics = calculateTypeStatistics(startDate, endDate);
+
+        BigDecimalSummaryStatistics expenseStats = typeStatistics.get(true);
+        BigDecimalSummaryStatistics incomeStats = typeStatistics.get(false);
+
         long totalDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+
         long totalDaysWithTransaction = transactionList.stream()
+                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
                 .map(Transaction::getDate)
                 .distinct()
                 .count();
 
-        double averageExpensePerDay = totalExpense / totalDays;
-        double averageExpensePerDayWithTransaction = totalExpense / totalDaysWithTransaction;
+        BigDecimal averageExpensePerDay = expenseStats.getSum().divide(BigDecimal.valueOf(totalDays), 2, RoundingMode.HALF_UP);
+        BigDecimal averageExpensePerDayWithTransaction = expenseStats.getSum().divide(BigDecimal.valueOf(totalDaysWithTransaction), 2, RoundingMode.HALF_UP);
 
         return new ReportDTO(
                 transactionList,
-                totals,
+                incomeStats,
+                expenseStats,
                 totalDays,
                 totalDaysWithTransaction,
                 averageExpensePerDay,
-                averageExpensePerDayWithTransaction);
+                averageExpensePerDayWithTransaction,
+                expenseStats.getMax(),
+                expenseStats.getMin(),
+                incomeStats.getMax(),
+                incomeStats.getMin()
+        );
     }
 
     @Override
-    public Map<TransactionType, Double> calculateTypeTotals(LocalDate startDate, LocalDate endDate) {
+    public Map<TransactionType, BigDecimal> calculateTypeTotals(LocalDate startDate, LocalDate endDate) {
         return transactionRepository.findAll().stream()
                 .filter(t -> (startDate == null || !t.getDate().isBefore(startDate))
                             && (endDate == null || !t.getDate().isAfter(endDate)))
-                .collect(Collectors.groupingBy(Transaction::getType, Collectors.summingDouble(Transaction::getAmount)));
+                .collect(Collectors.groupingBy(Transaction::getType, BigDecimalCollectors.summingBigDecimal(Transaction::getAmount)));
     }
 
     @Override
-    public Map<String, Double> calculateCategoryTotals(LocalDate startDate, LocalDate endDate) {
+    public Map<String, BigDecimal> calculateCategoryTotals(LocalDate startDate, LocalDate endDate) {
         return transactionRepository.findAll().stream()
                 .filter(t -> (startDate == null || !t.getDate().isBefore(startDate))
                         && (endDate == null || !t.getDate().isAfter(endDate)))
-                .collect(Collectors.groupingBy(t -> t.getCategory().getName(), Collectors.summingDouble(Transaction::getAmount)));
+                .collect(Collectors.groupingBy(
+                        t -> t.getCategory().getName(),
+                        BigDecimalCollectors.summingBigDecimal(Transaction::getAmount)
+                ));
+    }
+
+    public Map<Boolean, BigDecimalSummaryStatistics> calculateTypeStatistics(LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.findAll().stream()
+                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
+                .collect(Collectors.partitioningBy(
+                        t -> t.getType() == EXPENSE,
+                        summarizingBigDecimal(Transaction::getAmount)
+                ));
     }
 }

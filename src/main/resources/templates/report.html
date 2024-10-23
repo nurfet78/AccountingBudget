@@ -18,16 +18,26 @@
       <h4>Отчетный период</h4>
       <p>с <span th:text="${#temporals.format(startDate, 'dd-MM-yyyy')}"></span></p>
       <p>по <span th:text="${#temporals.format(endDate, 'dd-MM-yyyy')}"></span></p>
+      <p>
+         <span>Максимальная сумма покупки: <span th:text="${report.maxDailyExpense}"></span></span>
+        <br />
+         <span>Минимальная сумма покупки: <span th:text="${report.minDailyExpense}"></span></span>
+      </p>
+      <p>
+         <span>Максимальная сумма единовременного дохода: <span th:text="${report.maxSingleIncome}"></span></span>
+        <br />
+         <span>Минимальная сумма единовременного дохода: <span th:text="${report.minSingleIncome}"></span></span>
+      </p>
     </div>
     <div class="col-md-6">
       <h4>Итого</h4>
-      <p>Общий доход: <span th:text="${#numbers.formatDecimal(report.typeTotals['INCOME'], 1, 2)}"></span></p>
-      <p>Общий расход: <span th:text="${#numbers.formatDecimal(report.typeTotals['EXPENSE'], 1, 2)}"></span></p>
+      <p>Общий доход: <span th:text="${#numbers.formatDecimal(report.incomeStats.getSum(), 1, 2)}"></span></p>
+      <p>Общий расход: <span th:text="${#numbers.formatDecimal(report.expenseStats.getSum(), 1, 2)}"></span></p>
       <p>Всего дней: <span th:text="${report.totalDays}"></span></p>
       <p>Дней с покупками: <span th:text="${report.daysWithTransactions}"></span></p>
       <p>Ежедневный средний расход: <span th:text="${#numbers.formatDecimal(report.averageExpensePerDay, 1, 2)}"></span></p>
       <p>Средний расход в дни с транзакциями: <span th:text="${#numbers.formatDecimal(report.averageExpensePerTransactionDay, 1, 2)}"></span></p>
-      <p>Баланс: <span th:text="${#numbers.formatDecimal((report.typeTotals['INCOME'] ?: 0) - (report.typeTotals['EXPENSE'] ?: 0), 1, 2)}"></span></p>
+      <p>Баланс: <span th:text="${#numbers.formatDecimal((report.incomeStats.getSum() ?: 0) - (report.expenseStats.getSum() ?: 0), 1, 2)}"></span></p>
     </div>
   </div>
 
@@ -66,10 +76,12 @@
 </div>
 
 <script th:inline="javascript">
-  var typeTotals = /*[[${report.typeTotals}]]*/ {};
-  var totalIncome = typeTotals['INCOME'] || 0;
-  var totalExpense = typeTotals['EXPENSE'] || 0;
+  var totalIncome = /*[[${#numbers.formatDecimal(report.incomeStats.getSum(), 1, 'COMMA', 2, 'POINT')}]]*/ "0.00";
+  var totalExpense = /*[[${#numbers.formatDecimal(report.expenseStats.getSum(), 1, 'COMMA', 2, 'POINT')}]]*/ "0.00";
   var categoryTotals = [[${categoryTotals}]];
+
+  totalIncome = parseFloat(totalIncome.replace(',', ''));
+  totalExpense = parseFloat(totalExpense.replace(',', ''));
 
   var incomeExpenseCtx = document.getElementById('incomeExpenseChart').getContext('2d');
   var categoryCtx = document.getElementById('categoryChart').getContext('2d');
