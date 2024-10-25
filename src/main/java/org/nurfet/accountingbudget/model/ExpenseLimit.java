@@ -3,6 +3,8 @@ package org.nurfet.accountingbudget.model;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,6 +20,8 @@ import java.time.LocalDate;
 @Entity
 public class ExpenseLimit extends AbstractEntity {
 
+    @NotNull(message = "Лимит должен быть указан")
+    @DecimalMin(value = "0.01", inclusive = true, message = "Лимит должен быть больше нуля")
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
@@ -29,21 +33,15 @@ public class ExpenseLimit extends AbstractEntity {
 
     private LocalDate nextResetDate;
 
-    public void setLimitPeriod(LimitPeriod period, LocalDate startDate) {
+    public LocalDate setLimitPeriod(LimitPeriod period, LocalDate startDate) {
         this.period = period;
         this.startDate = startDate;
 
-        switch (period) {
-            case WEEKLY:
-                this.endDate = startDate.plusWeeks(1).minusDays(1);
-                break;
-            case MONTHLY:
-                this.endDate = startDate.plusMonths(1).minusDays(1);
-                break;
-            case INDEFINITE:
-                this.endDate = null;
-                break;
-        }
+        return switch (period) {
+            case WEEKLY -> this.endDate = startDate.plusWeeks(1).minusDays(1);
+            case MONTHLY -> this.endDate = startDate.plusMonths(1).minusDays(1);
+            case INDEFINITE -> this.endDate = null;
+        };
     }
 
     @Getter
@@ -57,13 +55,22 @@ public class ExpenseLimit extends AbstractEntity {
         }
     }
 
+    public boolean isExpired() {
+        LocalDate today = LocalDate.now();
+
+        if (this.period == LimitPeriod.INDEFINITE) {
+            return false; // Бессрочный лимит никогда не истекает
+        }
+
+        return today.isAfter(this.endDate);
+    }
+
     //для веб-интерфейса
     public String getPeriodDisplayName() {
         return switch (this.period) {
             case MONTHLY -> "В месяц";
             case WEEKLY -> "В неделю";
             case INDEFINITE -> "Бессрочно";
-            default -> "Неизвестно";
         };
     }
 }

@@ -50,4 +50,9 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException(Category.class, id));
     }
+
+    @Override
+    public boolean existsCategoryByName(String categoryName) {
+        return categoryRepository.existsByName(categoryName);
+    }
 }

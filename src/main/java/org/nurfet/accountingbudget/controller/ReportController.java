@@ -33,8 +33,6 @@ public class ReportController {
 
         Map<String, BigDecimal> res = transactionService.calculateCategoryTotals(startDate, endDate);
 
-        log.info("Category info: {}", res.get("Зарплата").toString());
-
 
         model.addAttribute("report", report);
         model.addAttribute("categoryTotals", transactionService.calculateCategoryTotals(startDate, endDate));

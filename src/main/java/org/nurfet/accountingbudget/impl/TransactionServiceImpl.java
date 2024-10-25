@@ -124,8 +124,13 @@ public class TransactionServiceImpl implements TransactionService {
                 .distinct()
                 .count();
 
-        BigDecimal averageExpensePerDay = expenseStats.getSum().divide(BigDecimal.valueOf(totalDays), 2, RoundingMode.HALF_UP);
-        BigDecimal averageExpensePerDayWithTransaction = expenseStats.getSum().divide(BigDecimal.valueOf(totalDaysWithTransaction), 2, RoundingMode.HALF_UP);
+        BigDecimal averageExpensePerDay = totalDays > 0
+                ? expenseStats.getSum().divide(BigDecimal.valueOf(totalDays), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        BigDecimal averageExpensePerDayWithTransaction = totalDaysWithTransaction > 0
+                ? expenseStats.getSum().divide(BigDecimal.valueOf(totalDaysWithTransaction), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
 
         return new ReportDTO(
                 transactionList,

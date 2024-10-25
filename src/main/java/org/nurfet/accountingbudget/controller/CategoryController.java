@@ -1,11 +1,14 @@
 package org.nurfet.accountingbudget.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.nurfet.accountingbudget.model.Category;
 import org.nurfet.accountingbudget.model.TransactionType;
 import org.nurfet.accountingbudget.service.CategoryService;
+import org.springframework.boot.Banner;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 @Controller
@@ -36,7 +39,19 @@ public class CategoryController {
     }
 
     @PostMapping("/save")
-    public String saveCategory(@ModelAttribute Category category) {
+    public String saveCategory(@Valid @ModelAttribute Category category, BindingResult bindingResult, Model model) {
+
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("transactionTypes", TransactionType.values());
+            return "category-form";
+        }
+
+        if (categoryService.existsCategoryByName(category.getName())) {
+            model.addAttribute("error", "Категория уже существует");
+            model.addAttribute("transactionTypes", TransactionType.values());
+            return "category-form";
+        }
+
         if (category.getId() == null) {
             categoryService.createCategory(category);
         } else {

@@ -1,5 +1,6 @@
 package org.nurfet.accountingbudget.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.nurfet.accountingbudget.model.Category;
 import org.nurfet.accountingbudget.model.Transaction;
@@ -9,6 +10,7 @@ import org.nurfet.accountingbudget.service.TransactionService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -51,10 +53,22 @@ public class TransactionController {
     }
 
     @PostMapping("/save")
-    public String saveTransaction(@ModelAttribute Transaction transaction, @RequestParam Long categoryId) {
-        Category category = categoryService.getCategoryById(categoryId);
-        transaction.setCategory(category);
-        transaction.setType(category.getDefaultType());
+    public String saveTransaction(@Valid @ModelAttribute Transaction transaction, BindingResult bindingResult,
+                                  Model model) {
+
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("categories", categoryService.getAllCategories());
+            return "transaction-form";
+        }
+
+        if (transaction.getCategory() == null) {
+            bindingResult.rejectValue("category", "error.category", "Категория должна быть выбрана");
+            model.addAttribute("categories", categoryService.getAllCategories());
+            return "transaction-form";
+        }
+
+        transaction.setType(transaction.getCategory().getDefaultType());
+
         transactionService.addTransaction(transaction);
         return "redirect:/transactions";
     }

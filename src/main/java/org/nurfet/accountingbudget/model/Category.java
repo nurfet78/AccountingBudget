@@ -1,6 +1,7 @@
 package org.nurfet.accountingbudget.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,6 +18,7 @@ import java.util.Set;
 public class Category extends AbstractEntity {
 
     @Column(nullable = false, unique = true)
+    @NotBlank(message = "Категория должать быть указана")
     private String name;
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

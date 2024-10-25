@@ -20,15 +20,24 @@
         <input type="hidden" th:field="*{id}" />
         <div class="form-group mb-3">
             <label for="date">Дата</label>
-            <input type="date" class="form-control" id="date" th:field="*{date}" required>
+            <input type="date" class="form-control"
+                   th:classappend="${#fields.hasErrors('dateSelected') or #fields.hasErrors('dateValid')} ? 'is-invalid'"
+                   id="date"
+                   th:field="*{date}">
+            <div class="invalid-feedback">
+                <span th:if="${#fields.hasErrors('dateSelected')}" th:errors="*{dateSelected}"></span>
+                <span th:if="${#fields.hasErrors('dateValid')}" th:errors="*{dateValid}"></span>
+            </div>
         </div>
         <div class="form-group mb-3">
             <label for="amount">Цена</label>
-            <input type="number" step="0.01" class="form-control" id="amount" th:field="*{amount}" required>
+            <input type="number" step="0.01" class="form-control" th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'"
+                   id="amount" th:field="*{amount}">
+            <div th:if="${#fields.hasErrors('amount')}" class="invalid-feedback" th:errors="*{amount}"></div>
         </div>
         <div class="form-group mb-3">
             <label for="category">Категория</label>
-            <select class="form-control" id="category" name="categoryId" required>
+            <select th:field="*{category}" class="form-control" th:classappend="${#fields.hasErrors('category')} ? 'is-invalid'" id="category">
                 <option value="">Выберите категорию</option>
                 <option th:each="cat : ${categories}"
                         th:value="${cat.id}"
@@ -37,26 +46,38 @@
                         th:selected="${transaction.category != null and transaction.category.id == cat.id}">
                 </option>
             </select>
+            <div th:if="${#fields.hasErrors('category')}" class="invalid-feedback" th:errors="*{category}"></div>
         </div>
         <div class="form-group mb-3">
             <label for="displayType">Тип</label>
             <input type="text" class="form-control" id="displayType" readonly>
+            <input type="hidden" th:field="*{type}" id="type">
         </div>
         <div class="form-group mb-3">
             <label for="description">Описание</label>
-            <input type="text" class="form-control" id="description" th:field="*{description}">
+            <input type="text" class="form-control" th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'"
+                   id="description" th:field="*{description}">
+            <div th:if="${#fields.hasErrors('description')}" class="invalid-feedback" th:errors="*{description}"></div>
         </div>
         <button type="submit" class="btn btn-primary">Сохранить</button>
         <a th:href="@{/transactions}" class="btn btn-secondary">Отмена</a>
     </form>
 </div>
-<script>
+<script th:inline="javascript">
     $(document).ready(function() {
-        $('#category').change(function() {
-            var selectedOption = $(this).find('option:selected');
-            var defaultType = selectedOption.data('type');
-            $('#displayType').val(defaultType === 'INCOME' ? 'Доход' : (defaultType === 'EXPENSE' ? 'Расход' : ''));
-        });
+        function updateDisplayType() {
+            let selectedOption = $('#category option:selected');
+            let defaultType = selectedOption.data('type');
+            let displayType = defaultType === 'INCOME' ? 'Доход' : (defaultType === 'EXPENSE' ? 'Расход' : '');
+            $('#displayType').val(displayType);
+            $('#type').val(defaultType);
+        }
+
+        // Инициализация при загрузке страницы
+        updateDisplayType();
+
+        // Обновление при изменении категории
+        $('#category').change(updateDisplayType);
     });
 </script>
 </body>
