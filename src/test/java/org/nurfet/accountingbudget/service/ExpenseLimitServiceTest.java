@@ -315,6 +315,67 @@ public class ExpenseLimitServiceTest {
                 "Сообщение должно точно соответствовать ожидаемому формату");
     }
 
+    @Test
+    void testCalculateEndDate() {
+        printTestInfo("testCalculateEndDate", "Начало теста",
+                "Проверка расчета даты окончания для разных периодов",
+                "Создание тестового лимита");
+
+        ExpenseLimit limit = new ExpenseLimit();
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        printTestInfo("testCalculateEndDate", "Начальная дата",
+                startDate.toString(),
+                "Будет использоваться для всех проверок");
+
+        // Проверка недельного периода
+        limit.setLimitPeriod(ExpenseLimit.LimitPeriod.WEEKLY, startDate);
+        printTestInfo("testCalculateEndDate", "Недельный период",
+                String.format("Ожидаемая дата окончания: %s", startDate.plusWeeks(1).minusDays(1)),
+                String.format("Фактическая дата окончания: %s", limit.getEndDate()));
+        assertEquals(startDate.plusWeeks(1).minusDays(1), limit.getEndDate(),
+                "Неделя должна заканчиваться через 6 дней после начала");
+
+        // Проверка месячного периода
+        limit.setLimitPeriod(ExpenseLimit.LimitPeriod.MONTHLY, startDate);
+        printTestInfo("testCalculateEndDate", "Месячный период",
+                String.format("Ожидаемая дата окончания: %s", startDate.plusMonths(1).minusDays(1)),
+                String.format("Фактическая дата окончания: %s", limit.getEndDate()));
+        assertEquals(startDate.plusMonths(1).minusDays(1), limit.getEndDate(),
+                "Месяц должен заканчиваться в последний день месяца");
+
+        // Проверка бессрочного периода
+        limit.setLimitPeriod(ExpenseLimit.LimitPeriod.INDEFINITE, startDate);
+        printTestInfo("testCalculateEndDate", "Бессрочный период",
+                "Ожидаемая дата окончания: null",
+                String.format("Фактическая дата окончания: %s", limit.getEndDate()));
+        assertNull(limit.getEndDate(),
+                "Бессрочный период не должен иметь даты окончания");
+
+        // Проверка граничных случаев
+        printTestInfo("testCalculateEndDate", "Проверка граничных случаев",
+                "Установка null значений",
+                "Проверка обработки null");
+
+        limit.setLimitPeriod(null, startDate);
+        printTestInfo("testCalculateEndDate", "Null период",
+                "Ожидаемая дата окончания: null",
+                String.format("Фактическая дата окончания: %s", limit.getEndDate()));
+        assertNull(limit.getEndDate(),
+                "При null периоде дата окончания должна быть null");
+
+        limit.setLimitPeriod(ExpenseLimit.LimitPeriod.WEEKLY, null);
+        printTestInfo("testCalculateEndDate", "Null дата начала",
+                "Ожидаемая дата окончания: null",
+                String.format("Фактическая дата окончания: %s", limit.getEndDate()));
+        assertNull(limit.getEndDate(),
+                "При null дате начала дата окончания должна быть null");
+
+        // Итоговый результат
+        printTestInfo("testCalculateEndDate", "Результат теста",
+                "Все проверки выполнены успешно",
+                "Расчет дат окончания работает корректно для всех периодов");
+    }
+
     private ExpenseLimit createAndSaveLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period, LocalDate startDate, boolean autoRenew) {
         ExpenseLimit limit = new ExpenseLimit();
         limit.setAmount(amount);

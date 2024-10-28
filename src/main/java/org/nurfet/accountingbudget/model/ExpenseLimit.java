@@ -40,12 +40,21 @@ public class ExpenseLimit extends AbstractEntity {
         this.startDate = startDate;
         this.endDate = calculateEndDate(startDate, period);
     }
+
     private LocalDate calculateEndDate(LocalDate startDate, LimitPeriod period) {
+        if (startDate == null || period == null) {
+            return null;
+        }
+
         return switch (period) {
             case WEEKLY -> startDate.plusWeeks(1).minusDays(1);
             case MONTHLY -> startDate.plusMonths(1).minusDays(1);
             case INDEFINITE -> null;
         };
+    }
+
+    public void updateDates(LocalDate newStartDate) {
+        setLimitPeriod(this.period, newStartDate);
     }
 
     @Getter

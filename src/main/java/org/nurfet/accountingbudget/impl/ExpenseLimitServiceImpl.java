@@ -93,7 +93,7 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
         LocalDate oldEndDate = limit.getEndDate();
 
         limit.setStartDate(newStartDate);
-        limit.setEndDate(calculateEndDate(newStartDate, limit.getPeriod()));
+        limit.updateDates(newStartDate);
         expenseLimitRepository.save(limit);
 
 
@@ -141,7 +141,7 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
         if (futureLimit != null) {
             futureLimit.setAmount(amount);
             futureLimit.setPeriod(period);
-            futureLimit.setEndDate(calculateEndDate(futureLimit.getStartDate(), period));
+            futureLimit.updateDates(futureLimit.getStartDate());
             expenseLimitRepository.save(futureLimit);
         } else {
             setFutureLimitAmount(amount, period, autoRenew);
@@ -178,7 +178,8 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
                 LocalDate today = getCurrentDate();
                 if (futureLimit.getStartDate().isAfter(today)) {
                     futureLimit.setStartDate(today);
-                    futureLimit.setEndDate(calculateEndDate(today, futureLimit.getPeriod()));
+                    futureLimit.setLimitPeriod(futureLimit.getPeriod(), today);
+                    futureLimit.updateDates(today);
                     expenseLimitRepository.save(futureLimit);
                 }
             }
@@ -190,14 +191,6 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
         return (overrideDate != null && !overrideDate.isEmpty())
                 ? LocalDate.parse(overrideDate)
                 : LocalDate.now();
-    }
-
-    private LocalDate calculateEndDate(LocalDate startDate, LimitPeriod period) {
-        return switch (period) {
-            case WEEKLY -> startDate.plusWeeks(1).minusDays(1);
-            case MONTHLY -> startDate.plusMonths(1).minusDays(1);
-            case INDEFINITE -> null;
-        };
     }
 
     private void sendNewLimitActivationNotification(ExpenseLimit newLimit) {
