@@ -8,12 +8,12 @@ import org.nurfet.accountingbudget.observer.model.SendMessage;
 import org.nurfet.accountingbudget.observer.service.MailEventPublisherService;
 import org.nurfet.accountingbudget.repository.ExpenseLimitRepository;
 import org.nurfet.accountingbudget.service.ExpenseLimitService;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -24,89 +24,119 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
 
     private final MailEventPublisherService mailEventPublisherService;
 
-    private final Environment environment;
-
 
     @Override
-    public void setOrUpdateLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period) {
+    public void setOrUpdateLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period, boolean autoRenew) {
         ExpenseLimit limit = getCurrentLimit();
         if (limit == null) {
             limit = new ExpenseLimit();
         }
         limit.setAmount(amount);
         limit.setLimitPeriod(period, LocalDate.now());
+        limit.setAutoRenew(autoRenew);
         expenseLimitRepository.save(limit);
     }
 
     @Override
     public void checkAndResetLimitIfNeeded() {
-        ExpenseLimit limit = getCurrentLimit();
-        if (limit == null) return;
-
         LocalDate currentDate = getCurrentDate();
-        if (shouldResetLimit(currentDate, limit)) {
-            LocalDate oldStartDate = limit.getStartDate();
-            LocalDate oldEndDate = limit.getEndDate();
 
-            LocalDate newStartDate = oldEndDate.plusDays(1);
-            limit.setLimitPeriod(limit.getPeriod(), newStartDate);
-            expenseLimitRepository.save(limit);
+        List<ExpenseLimit> limits = expenseLimitRepository.findCurrentAndFutureLimits(currentDate);
 
-            String message = String.format(
-                    "Ваш лимит расходов в размере %.2f был сброшен. " +
-                            "Тип периода: '%s'. Старый период: %s - %s. Новый период начался с %s.",
-                    limit.getAmount(),
-                    limit.getPeriod().getTitle(),
-                    oldStartDate, oldEndDate, newStartDate
-            );
-            mailEventPublisherService.publishMailCreatedEvent(SendMessage.create(message));
+        // Сортируем лимиты по дате начала
+        limits.sort(Comparator.comparing(ExpenseLimit::getStartDate));
+
+        // Находим текущий лимит (первый по дате начала)
+        ExpenseLimit currentLimit = limits.isEmpty() ? null : limits.get(0);
+
+        // Находим будущий лимит (второй по дате начала, если есть)
+        ExpenseLimit futureLimit = limits.size() > 1 ? limits.get(1) : null;
+
+        if (currentLimit == null) {
+            log.info("Нет активного лимита.");
+            return;
+        }
+
+        // Предположим, у нас есть:
+        // 1. Текущий лимит (1000) с автопродлением: 2024-10-27 - 2024-11-02
+        // 2. Будущий лимит (500): 2024-11-03 - 2024-11-09
+        if (currentDate.isAfter(currentLimit.getEndDate()) || currentDate.isEqual(currentLimit.getEndDate())) {
+            // Когда наступает 2024-11-03:
+            // currentDate = 2024-11-03
+            // currentLimit.getEndDate() = 2024-11-02
+            // Условие выполняется (2024-11-03 > 2024-11-02)
+            if (futureLimit != null) { // Будущий лимит имеет приоритет над автопродлением
+                // futureLimit существует (500), поэтому выполняется эта ветка
+                // Активируется будущий лимит, независимо от того,
+                // что у текущего лимита включено автопродление
+                log.info("Активация будущего лимита: {}", futureLimit);
+                resetAndRenewLimit(futureLimit, currentDate, true);
+
+                // Эта ветка не выполнится, потому что есть будущий лимит
+            } else if (currentLimit.isAutoRenew()) {
+                log.info("Автоматическое обновление текущего лимита: {}", currentLimit);
+                resetAndRenewLimit(currentLimit, currentDate, false);
+            } else {
+                log.info("Лимит истек без автопродления и будущего лимита: {}", currentLimit);
+                sendExpirationNotification(currentLimit);
+                expenseLimitRepository.delete(currentLimit);
+                log.info("Удален истекший лимит: {}", currentLimit);
+            }
+        } else {
+            log.info("Нет необходимости сбрасывать или обновлять лимит. Текущий лимит все еще активен.");
         }
     }
 
-    @Override
-    public boolean shouldResetLimit(LocalDate currentDate, ExpenseLimit limit) {
-        if (limit.getPeriod() == ExpenseLimit.LimitPeriod.INDEFINITE) {
-            return false;
+    private void resetAndRenewLimit(ExpenseLimit limit, LocalDate newStartDate, boolean isNewLimit) {
+
+        LocalDate oldStartDate = limit.getStartDate();
+        LocalDate oldEndDate = limit.getEndDate();
+
+        limit.setStartDate(newStartDate);
+        limit.setEndDate(calculateEndDate(newStartDate, limit.getPeriod()));
+        expenseLimitRepository.save(limit);
+
+
+        if (isNewLimit) {
+            sendNewLimitActivationNotification(limit);
+        } else {
+            sendRenewalNotification(limit, oldStartDate, oldEndDate, newStartDate);
         }
-        return currentDate.isAfter(limit.getEndDate()) || currentDate.isEqual(limit.getEndDate());
     }
 
     @Override
     public ExpenseLimit getCurrentLimit() {
         LocalDate today = getCurrentDate();
-        ExpenseLimit currentLimit;
 
-        if (isTestEnvironment()) {
-            // Для тестового окружения
-            currentLimit = expenseLimitRepository.findTopByOrderByStartDateDesc().orElse(null);
-        } else {
-            // Для обычного запуска
-            currentLimit = expenseLimitRepository.findCurrentLimit(today);
+        List<ExpenseLimit> limits = expenseLimitRepository.findCurrentAndFutureLimits(today);
 
-            if (currentLimit == null) {
-                // Если текущий лимит не найден, проверяем, есть ли будущий лимит
-                ExpenseLimit futureLimit = getFutureLimit();
-                if (futureLimit != null && !futureLimit.getStartDate().isAfter(today)) {
-                    // Если будущий лимит есть и его дата начала не позже сегодняшней,
-                    // делаем его текущим
-                    futureLimit.setStartDate(today);
-                    futureLimit.setEndDate(calculateEndDate(today, futureLimit.getPeriod()));
-                    currentLimit = expenseLimitRepository.save(futureLimit);
-                }
-            }
+        ExpenseLimit currentLimit = limits.stream()
+                .filter(limit -> !today.isBefore(limit.getStartDate()) && !today.isAfter(limit.getEndDate()))
+                .findFirst()
+                .orElse(null);
+
+        if (currentLimit == null && !limits.isEmpty()) {
+            currentLimit = limits.getFirst(); // Берем последний истекший лимит
         }
 
         return currentLimit;
     }
 
+
     @Override
     public ExpenseLimit getFutureLimit() {
         LocalDate today = getCurrentDate();
-        return expenseLimitRepository.findFutureLimit(today);
+
+        List<ExpenseLimit> limits = expenseLimitRepository.findCurrentAndFutureLimits(today);
+
+        return limits.stream()
+                .filter(limit -> today.isBefore(limit.getStartDate()))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
-    public void replaceFutureLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period) {
+    public void replaceFutureLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period, boolean autoRenew) {
         ExpenseLimit futureLimit = getFutureLimit();
         if (futureLimit != null) {
             futureLimit.setAmount(amount);
@@ -114,12 +144,12 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
             futureLimit.setEndDate(calculateEndDate(futureLimit.getStartDate(), period));
             expenseLimitRepository.save(futureLimit);
         } else {
-            setFutureLimitAmount(amount, period);
+            setFutureLimitAmount(amount, period, autoRenew);
         }
     }
 
     @Override
-    public void setFutureLimitAmount(BigDecimal amount, LimitPeriod period) {
+    public void setFutureLimitAmount(BigDecimal amount, LimitPeriod period, boolean autoRenew) {
         ExpenseLimit currentLimit = getCurrentLimit();
         if (currentLimit == null) {
             throw new IllegalStateException("Невозможно установить будущий лимит, так как текущий лимит отсутствует");
@@ -129,9 +159,8 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
 
         ExpenseLimit futureLimit = new ExpenseLimit();
         futureLimit.setAmount(amount);
-        futureLimit.setPeriod(period);
-        futureLimit.setStartDate(nextPeriodStartDate);
-        futureLimit.setEndDate(calculateEndDate(nextPeriodStartDate, period));
+        futureLimit.setLimitPeriod(period, nextPeriodStartDate);
+        futureLimit.setAutoRenew(autoRenew);
 
         expenseLimitRepository.save(futureLimit);
     }
@@ -157,8 +186,10 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
     }
 
     private LocalDate getCurrentDate() {
-        String override = System.getProperty("expense-limit.current-date"); //Свойство устанавливается в тестах
-        return (override != null && !override.isEmpty()) ? LocalDate.parse(override) : LocalDate.now();
+        String overrideDate = System.getProperty("expense-limit.current-date");
+        return (overrideDate != null && !overrideDate.isEmpty())
+                ? LocalDate.parse(overrideDate)
+                : LocalDate.now();
     }
 
     private LocalDate calculateEndDate(LocalDate startDate, LimitPeriod period) {
@@ -169,7 +200,39 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
         };
     }
 
-    private boolean isTestEnvironment() {
-        return Arrays.asList(environment.getActiveProfiles()).contains("test");
+    private void sendNewLimitActivationNotification(ExpenseLimit newLimit) {
+        String message = String.format(
+                "Начал действовать новый лимит расходов в размере %.2f. " +
+                        "Тип периода: '%s'. Период: %s - %s.",
+                newLimit.getAmount(),
+                newLimit.getPeriod().getTitle(),
+                newLimit.getStartDate(), newLimit.getEndDate()
+        );
+        mailEventPublisherService.publishMailCreatedEvent(SendMessage.create(message));
+    }
+
+    private void sendRenewalNotification(ExpenseLimit limit, LocalDate oldStartDate, LocalDate oldEndDate, LocalDate newStartDate) {
+        String message = String.format(
+                "Ваш лимит расходов в размере %.2f был автоматически продлен. " +
+                        "Тип периода: '%s'. Старый период: %s - %s. Новый период начался с %s. Автопродление: %s.",
+                limit.getAmount(),
+                limit.getPeriod().getTitle(),
+                oldStartDate, oldEndDate, newStartDate,
+                limit.isAutoRenew() ? "включено" : "выключено"
+        );
+        mailEventPublisherService.publishMailCreatedEvent(SendMessage.create(message));
+    }
+
+    private void sendExpirationNotification(ExpenseLimit limit) {
+        String message = String.format(
+                "Ваш лимит расходов в размере %.2f истек. " +
+                        "Тип периода: '%s'. Период: %s - %s. " +
+                        "Для установки нового лимита, пожалуйста, войдите в систему.",
+                limit.getAmount(),
+                limit.getPeriod().getTitle(),
+                limit.getStartDate(), limit.getEndDate()
+        );
+
+        mailEventPublisherService.publishMailCreatedEvent(SendMessage.create(message));
     }
 }

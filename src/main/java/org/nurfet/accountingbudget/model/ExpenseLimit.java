@@ -1,5 +1,6 @@
 package org.nurfet.accountingbudget.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -31,16 +32,19 @@ public class ExpenseLimit extends AbstractEntity {
 
     private LocalDate endDate;
 
-    private LocalDate nextResetDate;
+    @Column(nullable = false)
+    private boolean autoRenew = false; // По умолчанию автопродление выключено
 
-    public LocalDate setLimitPeriod(LimitPeriod period, LocalDate startDate) {
+    public void setLimitPeriod(LimitPeriod period, LocalDate startDate) {
         this.period = period;
         this.startDate = startDate;
-
+        this.endDate = calculateEndDate(startDate, period);
+    }
+    private LocalDate calculateEndDate(LocalDate startDate, LimitPeriod period) {
         return switch (period) {
-            case WEEKLY -> this.endDate = startDate.plusWeeks(1).minusDays(1);
-            case MONTHLY -> this.endDate = startDate.plusMonths(1).minusDays(1);
-            case INDEFINITE -> this.endDate = null;
+            case WEEKLY -> startDate.plusWeeks(1).minusDays(1);
+            case MONTHLY -> startDate.plusMonths(1).minusDays(1);
+            case INDEFINITE -> null;
         };
     }
 
@@ -53,16 +57,6 @@ public class ExpenseLimit extends AbstractEntity {
         LimitPeriod(String title) {
             this.title = title;
         }
-    }
-
-    public boolean isExpired() {
-        LocalDate today = LocalDate.now();
-
-        if (this.period == LimitPeriod.INDEFINITE) {
-            return false; // Бессрочный лимит никогда не истекает
-        }
-
-        return today.isAfter(this.endDate);
     }
 
     //для веб-интерфейса

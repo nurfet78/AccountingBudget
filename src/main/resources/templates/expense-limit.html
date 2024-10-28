@@ -48,6 +48,12 @@
                 <option value="INDEFINITE">Бессрочно</option>
             </select>
         </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="autoRenew" th:field="*{autoRenew}">
+            <label class="form-check-label" for="autoRenew">
+                Автоматически продлевать лимит
+            </label>
+        </div>
         <button type="submit" class="btn btn-primary">Установить лимит</button>
     </form>
 

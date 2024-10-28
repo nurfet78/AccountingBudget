@@ -31,6 +31,9 @@
         <form th:action="@{/expense-limit/replace-future}" method="post">
             <input type="hidden" name="amount" th:value="${newLimit.amount}">
             <input type="hidden" name="period" th:value="${newLimit.period}">
+            <p>Автоматическое продление:
+                <span th:text="${newLimit.autoRenew ? 'Включено' : 'Выключено'}"></span>
+            </p>
             <button type="submit" class="btn btn-primary">Заменить будущий лимит</button>
         </form>
 

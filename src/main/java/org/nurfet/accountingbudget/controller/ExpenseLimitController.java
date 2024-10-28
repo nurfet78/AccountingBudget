@@ -9,10 +9,7 @@ import org.nurfet.accountingbudget.service.ExpenseLimitService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
@@ -61,7 +58,7 @@ public class ExpenseLimitController {
             return "redirect:/expense-limit/confirm";
         } else {
             // Если нет активного лимита, устанавливаем новый
-            expenseLimitService.setOrUpdateLimit(newLimit.getAmount(), newLimit.getPeriod());
+            expenseLimitService.setOrUpdateLimit(newLimit.getAmount(), newLimit.getPeriod(), newLimit.isAutoRenew());
             redirectAttributes.addFlashAttribute("message", "Новый лимит успешно установлен");
             return "redirect:/expense-limit";
         }
@@ -80,7 +77,7 @@ public class ExpenseLimitController {
     @PostMapping("/replace-future")
     public String replaceFutureLimit(@ModelAttribute("newLimit") ExpenseLimit newLimit,
                                      RedirectAttributes redirectAttributes) {
-        expenseLimitService.replaceFutureLimit(newLimit.getAmount(), newLimit.getPeriod());
+        expenseLimitService.replaceFutureLimit(newLimit.getAmount(), newLimit.getPeriod(), newLimit.isAutoRenew());
         redirectAttributes.addFlashAttribute("message", "Будущий лимит успешно заменен");
         return "redirect:/expense-limit";
     }
@@ -106,11 +103,11 @@ public class ExpenseLimitController {
 
         if (currentLimit != null && LocalDate.now().isBefore(currentLimit.getEndDate())) {
             // Устанавливаем будущий лимит
-            expenseLimitService.setFutureLimitAmount(newLimit.getAmount(), newLimit.getPeriod());
+            expenseLimitService.setFutureLimitAmount(newLimit.getAmount(), newLimit.getPeriod(), newLimit.isAutoRenew());
             redirectAttributes.addFlashAttribute("message", "Новый лимит будет применен после окончания текущего периода");
         } else {
             // Устанавливаем новый лимит немедленно
-            expenseLimitService.setOrUpdateLimit(newLimit.getAmount(), newLimit.getPeriod());
+            expenseLimitService.setOrUpdateLimit(newLimit.getAmount(), newLimit.getPeriod(), newLimit.isAutoRenew());
             redirectAttributes.addFlashAttribute("message", "Новый лимит успешно установлен");
         }
 

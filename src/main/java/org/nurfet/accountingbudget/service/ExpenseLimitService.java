@@ -4,23 +4,20 @@ import org.nurfet.accountingbudget.model.ExpenseLimit;
 import org.nurfet.accountingbudget.model.ExpenseLimit.LimitPeriod;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 public interface ExpenseLimitService {
 
-    void setOrUpdateLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period);
+    void setOrUpdateLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period, boolean autoRenew);
 
     void checkAndResetLimitIfNeeded();
-
-    boolean shouldResetLimit(LocalDate now, ExpenseLimit limit);
 
     ExpenseLimit getCurrentLimit();
 
     ExpenseLimit getFutureLimit();
 
-    void setFutureLimitAmount(BigDecimal amount, LimitPeriod period);
+    void setFutureLimitAmount(BigDecimal amount, LimitPeriod period, boolean autoRenew);
 
     void removeLimit();
 
-    void replaceFutureLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period);
+    void replaceFutureLimit(BigDecimal amount, ExpenseLimit.LimitPeriod period, boolean autoRenew);
 }

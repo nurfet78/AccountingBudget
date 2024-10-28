@@ -8,16 +8,12 @@ import org.springframework.stereotype.Repository;
 
 
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface ExpenseLimitRepository extends JpaRepository<ExpenseLimit, Long> {
 
-    @Query("SELECT e FROM ExpenseLimit e WHERE e.startDate > :date ORDER BY e.startDate ASC")
-    ExpenseLimit findFutureLimit(@Param("date") LocalDate date);
+    @Query("SELECT e FROM ExpenseLimit e WHERE e.startDate <= :date OR e.startDate > :date ORDER BY e.startDate ASC")
+    List<ExpenseLimit> findCurrentAndFutureLimits(@Param("date") LocalDate date);
 
-    @Query("SELECT e FROM ExpenseLimit e WHERE e.startDate <= :date AND e.endDate >= :date ORDER BY e.startDate DESC")
-    ExpenseLimit findCurrentLimit(@Param("date") LocalDate date);
-
-    Optional<ExpenseLimit> findTopByOrderByStartDateDesc();
 }

@@ -25,14 +25,18 @@
     <div class="alert alert-warning">
         <p>При подтверждении:</p>
         <ul>
-            <li>Лимит на текущий период будет пересчитан пропорционально оставшемуся времени.</li>
             <li>Новый лимит в полном объеме вступит в силу со следующего периода.</li>
         </ul>
     </div>
 
-    <form th:action="@{/expense-limit/confirm}" method="post">
+    <form th:action="@{/expense-limit/confirm}" th:object="${newLimit}" method="post">
         <input type="hidden" name="amount" th:value="${newLimit.amount}">
         <input type="hidden" name="period" th:value="${newLimit.period}">
+        <div class="form-check">
+            <p>Автоматическое продление:
+                <span th:text="${newLimit.autoRenew ? 'Включено' : 'Выключено'}"></span>
+            </p>
+        </div>
         <button type="submit" class="btn btn-primary">Подтвердить изменение</button>
     </form>
 
