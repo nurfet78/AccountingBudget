@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nurfet.accountingbudget.model.ExpenseLimit;
-import org.nurfet.accountingbudget.model.LimitChangeResult;
 import org.nurfet.accountingbudget.service.ExpenseLimitService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -12,11 +11,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
+
 
 @Controller
 @RequiredArgsConstructor
@@ -40,7 +36,7 @@ public class ExpenseLimitController {
 
     @PostMapping("/set")
     public String setLimit(@Valid @ModelAttribute("newLimit") ExpenseLimit newLimit, BindingResult bindingResult,
-                           RedirectAttributes redirectAttributes, Model model) {
+                           RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             return "expense-limit";
         }

@@ -22,7 +22,7 @@ import java.time.LocalDate;
 public class ExpenseLimit extends AbstractEntity {
 
     @NotNull(message = "Лимит должен быть указан")
-    @DecimalMin(value = "0.01", inclusive = true, message = "Лимит должен быть больше нуля")
+    @DecimalMin(value = "0.01", message = "Лимит должен быть больше нуля")
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
