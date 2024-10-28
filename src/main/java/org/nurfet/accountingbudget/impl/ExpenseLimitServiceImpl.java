@@ -57,22 +57,10 @@ public class ExpenseLimitServiceImpl implements ExpenseLimitService {
             return;
         }
 
-        // Предположим, у нас есть:
-        // 1. Текущий лимит (1000) с автопродлением: 2024-10-27 - 2024-11-02
-        // 2. Будущий лимит (500): 2024-11-03 - 2024-11-09
         if (currentDate.isAfter(currentLimit.getEndDate()) || currentDate.isEqual(currentLimit.getEndDate())) {
-            // Когда наступает 2024-11-03:
-            // currentDate = 2024-11-03
-            // currentLimit.getEndDate() = 2024-11-02
-            // Условие выполняется (2024-11-03 > 2024-11-02)
-            if (futureLimit != null) { // Будущий лимит имеет приоритет над автопродлением
-                // futureLimit существует (500), поэтому выполняется эта ветка
-                // Активируется будущий лимит, независимо от того,
-                // что у текущего лимита включено автопродление
+            if (futureLimit != null) {
                 log.info("Активация будущего лимита: {}", futureLimit);
                 resetAndRenewLimit(futureLimit, currentDate, true);
-
-                // Эта ветка не выполнится, потому что есть будущий лимит
             } else if (currentLimit.isAutoRenew()) {
                 log.info("Автоматическое обновление текущего лимита: {}", currentLimit);
                 resetAndRenewLimit(currentLimit, currentDate, false);
